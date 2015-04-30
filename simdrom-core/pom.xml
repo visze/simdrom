@@ -11,4 +11,11 @@
   <name>simdrom-core</name>
   <packaging>jar</packaging>
   
+  <dependencies>
+  	<dependency>
+  		<groupId>com.github.samtools</groupId>
+  		<artifactId>htsjdk</artifactId>
+  		<version>1.130</version>
+  	</dependency>
+  </dependencies>
 </project>
