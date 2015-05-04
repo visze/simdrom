@@ -11,61 +11,61 @@ import java.util.Set;
 
 import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
 
-public class SpikeIn implements Iterator<VariantContext>{
+import com.google.common.collect.ImmutableSet;
 
-	
-	
+public class SpikeIn implements Iterator<VariantContext> {
+
 	private VCFSampler backgroundSampler;
 	private VCFSampler mutationSampler;
-	
+
 	private VariantContext backgroundVC = null;
 	private VariantContext mutationsVC = null;
 	private boolean log;
-	private  Set<VariantContext> vcLogs;
-	
+	private Set<VariantContext> vcLogs;
+
 	public SpikeIn(VCFSampler backgroundSampler, boolean log) {
-		this(backgroundSampler,null, log);
+		this(backgroundSampler, null, log);
 	}
-	
-	
+
 	public SpikeIn(VCFSampler backgroundSampler, VCFSampler mutationSampler, boolean log) {
 		super();
 		this.backgroundSampler = backgroundSampler;
 		this.mutationSampler = mutationSampler;
 		this.log = log;
-		
+
 		if (backgroundSampler.hasNext())
 			backgroundVC = backgroundSampler.next();
 		if ((mutationSampler != null && mutationSampler.hasNext()))
 			mutationsVC = mutationSampler.next();
 	}
 
-
 	public VCFHeader getVCFHeader() {
 		if (mutationSampler != null) {
 			Set<VCFHeaderLine> metaData = new LinkedHashSet<VCFHeaderLine>();
 			metaData.addAll(backgroundSampler.getFileHeader().getMetaDataInInputOrder());
 			metaData.addAll(mutationSampler.getFileHeader().getMetaDataInInputOrder());
-			return new VCFHeader(metaData);
-			
-		} else 
-			return backgroundSampler.getFileHeader();
+			return new VCFHeader(metaData, ImmutableSet.<String> builder().add("Sampled").build());
+
+		} else
+			return new VCFHeader(backgroundSampler.getFileHeader().getMetaDataInInputOrder(), ImmutableSet
+					.<String> builder().add("Sampled").build());
 	}
-	
-	
+
 	@Override
 	public boolean hasNext() {
 		return (backgroundVC != null || mutationsVC != null);
 	}
+
 	@Override
 	public VariantContext next() {
 		return getNextVariantContext();
 	}
+
 	private VariantContext getNextVariantContext() {
 		VariantContext output = null;
 		boolean backgroundSelection = true;
 		if (backgroundVC != null || mutationsVC != null) {
-			
+
 			if (mutationsVC == null)
 				output = backgroundVC;
 			else if (backgroundVC == null) {
@@ -81,7 +81,7 @@ public class SpikeIn implements Iterator<VariantContext>{
 			} else {
 				output = backgroundVC;
 			}
-			
+
 			if (backgroundSampler.hasNext() && backgroundSelection)
 				backgroundVC = backgroundSampler.next();
 			if ((mutationSampler != null && mutationSampler.hasNext()) && !backgroundSelection)
@@ -91,18 +91,18 @@ public class SpikeIn implements Iterator<VariantContext>{
 			addLog(output);
 		return output;
 	}
-	
+
 	private void addLog(VariantContext output) {
 		if (log)
 			getVcLogs().add(output);
 	}
-
 
 	public void close() {
 		backgroundSampler.close();
 		if (mutationSampler != null)
 			mutationSampler.close();
 	}
+
 	public Set<VariantContext> getVcLogs() {
 		if (vcLogs == null)
 			vcLogs = new HashSet<VariantContext>();
