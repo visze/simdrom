@@ -1,11 +1,15 @@
 package de.charite.compbio.simdrom.io.writer;
 
+import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.vcf.VCFConstants;
+import htsjdk.variant.vcf.VCFEncoder;
 
 import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,18 +43,41 @@ public class VCFTSVWriter implements Closeable {
 	}
 
 	public void add(VariantContext vc) throws IOException {
-		List<Object> record = new ArrayList<Object>();
+		List<String> record = new ArrayList<String>();
 		record.add(vc.getContig());
-		record.add(vc.getStart());
+		record.add(String.valueOf(vc.getStart()));
 		record.add(vc.getID());
-		record.add(vc.getReference());
-		record.add(vc.getAlternateAlleles());
-		record.add(vc.getPhredScaledQual());
-		record.add(vc.getFilters());
+		// REF
+		record.add(vc.getReference().getDisplayString());
+		// ALT
+		final StringBuilder stringBuilder = new StringBuilder();
+		if (vc.isVariant()) {
+			Allele altAllele = vc.getAlternateAllele(0);
+			String alt = altAllele.getDisplayString();
+			stringBuilder.append(alt);
+
+			for (int i = 1; i < vc.getAlternateAlleles().size(); i++) {
+				altAllele = vc.getAlternateAllele(i);
+				alt = altAllele.getDisplayString();
+				stringBuilder.append(",");
+				stringBuilder.append(alt);
+			}
+			record.add(stringBuilder.toString());
+		} else {
+			record.add(VCFConstants.EMPTY_ALTERNATE_ALLELE_FIELD);
+		}
+		// QUAL
+		if (!vc.hasLog10PError())
+			record.add(VCFConstants.MISSING_VALUE_v4);
+		else
+			stringBuilder.append(formatQualValue(vc.getPhredScaledQual()));
+		// FILTER
+		record.add(formatVCFField(vc.getFilters()));
+		// INFO
 		for (String header : getHeader()) {
 			if (!header_start.contains(header)) {
 				if (vc.getCommonInfo().hasAttribute(header)) {
-					record.add(vc.getCommonInfo().getAttribute(header));
+					record.add(formatVCFField(vc.getCommonInfo().getAttribute(header)));
 				}
 			}
 		}
@@ -67,6 +94,43 @@ public class VCFTSVWriter implements Closeable {
 	public void close() throws IOException {
 		printer.close();
 
+	}
+
+	private String formatVCFField(final Object val) {
+		final String result;
+		if (val == null)
+			result = VCFConstants.MISSING_VALUE_v4;
+		else if (val instanceof Double)
+			result = VCFEncoder.formatVCFDouble((Double) val);
+		else if (val instanceof Boolean)
+			result = (Boolean) val ? "" : null; // empty string for true, null
+												// for false
+		else if (val instanceof List) {
+			result = formatVCFField(((List) val).toArray());
+		} else if (val.getClass().isArray()) {
+			final int length = Array.getLength(val);
+			if (length == 0)
+				return formatVCFField(null);
+			final StringBuilder sb = new StringBuilder(formatVCFField(Array.get(val, 0)));
+			for (int i = 1; i < length; i++) {
+				sb.append(",");
+				sb.append(formatVCFField(Array.get(val, i)));
+			}
+			result = sb.toString();
+		} else
+			result = val.toString();
+
+		return result;
+	}
+
+	private static final String QUAL_FORMAT_STRING = "%.2f";
+	private static final String QUAL_FORMAT_EXTENSION_TO_TRIM = ".00";
+
+	private String formatQualValue(final double qual) {
+		String s = String.format(QUAL_FORMAT_STRING, qual);
+		if (s.endsWith(QUAL_FORMAT_EXTENSION_TO_TRIM))
+			s = s.substring(0, s.length() - QUAL_FORMAT_EXTENSION_TO_TRIM.length());
+		return s;
 	}
 
 }

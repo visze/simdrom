@@ -51,6 +51,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	@Override
 	public boolean hasNext() {
+		// FIXME has next can be true, but next can gi9ve back null!
 		return getIterator().hasNext();
 	}
 
@@ -135,10 +136,11 @@ public class VCFSampler implements Iterator<VariantContext> {
 			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++) {
 				if (getProbability() >= counts)
 					candidates.add(i);
-				if (selected <= (int) Math.ceil(getProbability()) && nextDouble() <= Math.ceil(getProbability()) / (double) counts)
+				if (selected <= (int) Math.ceil(getProbability())
+						&& nextDouble() <= Math.ceil(getProbability()) / (double) counts)
 					candidates.add(i);
 			}
-			
+
 		} else { // probability
 			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++) {
 				if (nextDouble() <= getProbability())
