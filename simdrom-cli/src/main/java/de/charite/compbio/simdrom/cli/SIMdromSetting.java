@@ -40,6 +40,10 @@ public class SIMdromSetting {
 	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
 	 */
 	public static String ALLELE_FREQUENCY_IDENTIFIER;
+	/**
+	 * Spike in log file to get informations about the spike in.
+	 */
+	public static String SPLIKE_IN_LOGFILE;
 
 	/**
 	 * parse the option arguments of the command line and set the static fields.
@@ -96,6 +100,13 @@ public class SIMdromSetting {
 				.withDescription("Optional. If set, the identifier in the info string of the background VCF will be used as single probabilities to call variants.");
 		options.addOption(OptionBuilder.create("AF"));
 
+		// spike in log
+		OptionBuilder.hasArg();
+		OptionBuilder.withLongOpt("spike-in-log");
+		OptionBuilder
+				.withDescription("Optional. Path for a log file (TSV-Format) that descibes the spiked in mutations.");
+		options.addOption(OptionBuilder.create());
+
 		CommandLineParser parser = new GnuParser();
 		try {
 			CommandLine cmd = parser.parse(options, args);
@@ -113,6 +124,8 @@ public class SIMdromSetting {
 				ONLY_ONE_SAMPLE = true;
 			if (cmd.hasOption("allele-frequency-idenifier"))
 				ALLELE_FREQUENCY_IDENTIFIER = cmd.getOptionValue("allele-frequency-idenifier");
+			if (cmd.hasOption("spike-in-log"))
+				SPLIKE_IN_LOGFILE = cmd.getOptionValue("spike-in-log");
 
 		} catch (MissingOptionException e) {
 			HelpFormatter formatter = new HelpFormatter();

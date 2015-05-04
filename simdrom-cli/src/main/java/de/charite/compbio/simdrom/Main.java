@@ -1,18 +1,17 @@
 package de.charite.compbio.simdrom;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.writer.Options;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder;
-import htsjdk.variant.vcf.VCFHeader;
-import htsjdk.variant.vcf.VCFHeaderLine;
+
+import java.io.IOException;
 
 import org.apache.commons.cli.ParseException;
 
 import de.charite.compbio.simdrom.cli.SIMdromSetting;
+import de.charite.compbio.simdrom.io.writer.VCFTSVWriter;
+import de.charite.compbio.simdrom.sampler.SpikeIn;
 import de.charite.compbio.simdrom.sampler.vcf.VCFAlternativeAlleleCounter;
 import de.charite.compbio.simdrom.sampler.vcf.VCFRandomSampleSelecter;
 import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
@@ -23,7 +22,7 @@ import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
  */
 public class Main {
 
-	public static void main(String[] args) throws ParseException {
+	public static void main(String[] args) throws ParseException, IOException {
 
 		SIMdromSetting.parse(args);
 
@@ -57,53 +56,41 @@ public class Main {
 			}
 		}
 
+		// writer
 		VariantContextWriter writer = new VariantContextWriterBuilder().setOutputVCFStream(System.out)
 				.unsetOption(Options.INDEX_ON_THE_FLY).build();
-		
-//		header
-		if (mutationSampler != null) {
-			Set<VCFHeaderLine> metaData = new LinkedHashSet<VCFHeaderLine>();
-			metaData.addAll(backgroundSampler.getFileHeader().getMetaDataInInputOrder());
-			metaData.addAll(mutationSampler.getFileHeader().getMetaDataInInputOrder());
-			writer.writeHeader(new VCFHeader(metaData));
-			
-		} else 
-			writer.writeHeader(backgroundSampler.getFileHeader());
-		
-		VariantContext backgroundVC = null;
-		VariantContext mutationsVC = null;
-		
-		if (backgroundSampler.hasNext())
-			backgroundVC = backgroundSampler.next();
-		if ((mutationSampler != null && mutationSampler.hasNext()))
-			mutationsVC = mutationSampler.next();
-		while (backgroundVC != null || mutationsVC != null) {
-			boolean backgroundSelection = true;
-			
-			if (mutationsVC == null)
-				writer.add(backgroundVC);
-			else if (backgroundVC == null) {
-				writer.add(mutationsVC);
-				backgroundSelection = false;
-			} else if (backgroundVC.getContig().equals(mutationsVC.getContig())) {
-				if (backgroundVC.getStart() <= mutationsVC.getStart())
-					writer.add(backgroundVC);
-				else {
-					writer.add(mutationsVC);
-					backgroundSelection = false;
-				}
-			} else {
-				writer.add(backgroundVC);
-			}
-			
-			if (backgroundSampler.hasNext() && backgroundSelection)
-				backgroundVC = backgroundSampler.next();
-			if ((mutationSampler != null && mutationSampler.hasNext()) && !backgroundSelection)
-				mutationsVC = mutationSampler.next();
+
+		// log
+		boolean log = SIMdromSetting.SPLIKE_IN_LOGFILE != null;
+
+		SpikeIn spikein = new SpikeIn(backgroundSampler, mutationSampler, log);
+
+		// header
+		writer.writeHeader(spikein.getVCFHeader());
+
+		// spike in and write out
+		while (spikein.hasNext()) {
+			writer.add(spikein.next());
 		}
+
+		// write log
+		if (log) {
+			VCFTSVWriter logWriter = new VCFTSVWriter(SIMdromSetting.SPLIKE_IN_LOGFILE);
+			boolean header = false;
+			for (VariantContext vc : spikein.getVcLogs()) {
+				if (!header) {
+					logWriter.writeHeader(vc);
+					header = true;
+				}
+				logWriter.add(vc);
+			}
+			logWriter.close();
+		}
+
+		// close properly
 		writer.close();
-		backgroundSampler.close();
-		if (mutationSampler != null)
-			mutationSampler.close();
+		spikein.close();
+		// and exit properly
+		System.exit(0);
 	}
 }
