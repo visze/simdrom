@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
+
 /**
  * @author Max Schubach <max.schubach@charite.de>
  *
@@ -161,12 +163,6 @@ public class VCFSampler implements Iterator<VariantContext> {
 		return random.nextDouble();
 	}
 
-	private int nextInt(int bound) {
-		if (random == null)
-			random = new Random();
-		return random.nextInt(bound);
-	}
-
 	public void setProbability(double probability) {
 		this.probability = probability;
 	}
@@ -193,10 +189,10 @@ public class VCFSampler implements Iterator<VariantContext> {
 		return new VCFHeader(set, getSampleNames());
 	}
 
-	private List<String> getSampleNames() {
-		List<String> samples = new ArrayList<String>();
-		samples.add("Sampled");
-		return samples;
+	public ImmutableSet<String> getSampleNames() {
+		if (getSample() == null)
+			return ImmutableSet.<String> builder().add("Sampled").build();
+		return ImmutableSet.<String> builder().add(getSample()).build();
 	}
 
 	public void setCounts(int counts) {

@@ -4,7 +4,6 @@
 package de.charite.compbio.simdrom.sampler.vcf;
 
 import htsjdk.variant.vcf.VCFFileReader;
-import htsjdk.variant.vcf.VCFHeader;
 
 import java.io.File;
 import java.util.List;
@@ -30,9 +29,7 @@ public class VCFRandomSampleSelecter {
 	}
 	
 	private String selectSample() {
-		VCFHeader test = parser.getFileHeader();
-		System.out.println(test);
-		List<String> samples = test.getGenotypeSamples();
+		List<String> samples =  parser.getFileHeader().getGenotypeSamples();
 		parser.close();
 		int num = new Random().nextInt(samples.size());
 		return samples.get(num);

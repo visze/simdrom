@@ -11,8 +11,6 @@ import java.util.Set;
 
 import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
 
-import com.google.common.collect.ImmutableSet;
-
 public class SpikeIn implements Iterator<VariantContext> {
 
 	private VCFSampler backgroundSampler;
@@ -44,11 +42,11 @@ public class SpikeIn implements Iterator<VariantContext> {
 			Set<VCFHeaderLine> metaData = new LinkedHashSet<VCFHeaderLine>();
 			metaData.addAll(backgroundSampler.getFileHeader().getMetaDataInInputOrder());
 			metaData.addAll(mutationSampler.getFileHeader().getMetaDataInInputOrder());
-			return new VCFHeader(metaData, ImmutableSet.<String> builder().add("Sampled").build());
+			return new VCFHeader(metaData, backgroundSampler.getSampleNames());
 
 		} else
-			return new VCFHeader(backgroundSampler.getFileHeader().getMetaDataInInputOrder(), ImmutableSet
-					.<String> builder().add("Sampled").build());
+			return new VCFHeader(backgroundSampler.getFileHeader().getMetaDataInInputOrder(),
+					backgroundSampler.getSampleNames());
 	}
 
 	@Override
