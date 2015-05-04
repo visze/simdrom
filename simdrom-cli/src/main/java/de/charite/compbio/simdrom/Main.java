@@ -18,7 +18,6 @@ import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
 
 /**
  * @author Max Schubach <max.schubach@charite.de>
- *
  */
 public class Main {
 
@@ -70,7 +69,10 @@ public class Main {
 
 		// spike in and write out
 		while (spikein.hasNext()) {
-			writer.add(spikein.next());
+			VariantContext vc = spikein.next();
+			if (vc == null)
+				break;
+			writer.add(vc);
 		}
 
 		// write log
