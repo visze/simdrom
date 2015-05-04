@@ -80,9 +80,9 @@ public class SpikeIn implements Iterator<VariantContext> {
 				output = backgroundVC;
 			}
 
-			if (backgroundSampler.hasNext() && backgroundSelection)
+			if (backgroundSelection)
 				backgroundVC = backgroundSampler.next();
-			if ((mutationSampler != null && mutationSampler.hasNext()) && !backgroundSelection)
+			else
 				mutationsVC = mutationSampler.next();
 		}
 		if (!backgroundSelection)

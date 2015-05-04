@@ -18,13 +18,17 @@ import htsjdk.variant.vcf.VCFHeaderLineType;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimap;
 
 /**
  * @author Max Schubach <max.schubach@charite.de>
@@ -33,15 +37,17 @@ import com.google.common.collect.ImmutableSet;
 public class VCFSampler implements Iterator<VariantContext> {
 
 	private double probability;
-	private int counts;
-	private int selected = 0;
+	private List<Integer> selectAlleles;
+	private int position = -1;
 	private String afIdentifier;
 	private String sample = null;
 	private VCFFileReader parser;
 	private CloseableIterator<VariantContext> iterator;
 	private Random random;
+	private String filePath;
 
 	public VCFSampler(String filePath) {
+		this.filePath = filePath;
 		this.parser = new VCFFileReader(new File(filePath), false);
 	}
 
@@ -66,59 +72,60 @@ public class VCFSampler implements Iterator<VariantContext> {
 		VariantContext output = null;
 		while (getIterator().hasNext() && output == null) {
 			VariantContext candidate = getIterator().next();
-			List<Integer> alleles = useAlleles(candidate);
+			Map<Integer, Boolean> alleles = useAlleles(candidate);
 			if (!alleles.isEmpty()) {
-				output = selectOneGenotype(candidate, alleles);
+				output = createVariantContextWithGenotype(candidate, alleles);
 				break;
 			}
 		}
-		if (output != null)
-			selected += output.getAlternateAlleles().size();
 		return output;
 	}
 
-	private VariantContext selectOneGenotype(VariantContext candidate, List<Integer> alleles) {
+	private VariantContext createVariantContextWithGenotype(VariantContext candidate, Map<Integer, Boolean> alleles) {
 		if (useSample()) {
 			if (candidate.hasGenotype(getSample()))
-				return new VariantContextBuilder(candidate).alleles(getAlleles(candidate, alleles))
+				return new VariantContextBuilder(candidate).alleles(getAlleles(candidate, alleles.keySet()))
 						.genotypes(candidate.getGenotypes(getSample())).make();
 			else
 				return null;
 		} else {
-			return new VariantContextBuilder(candidate).genotypes(createGenotype(candidate.getAlleles())).make();
+			return new VariantContextBuilder(candidate).genotypes(createGenotype(candidate.getAlleles(),alleles)).make();
 		}
 	}
 
-	private Collection<Allele> getAlleles(VariantContext candidate, List<Integer> numAlleles) {
+	private Collection<Allele> getAlleles(VariantContext candidate, Set<Integer> posOfAllele) {
 		Collection<Allele> alleles = new ArrayList<Allele>();
 		alleles.add(candidate.getReference());
-		for (int i : numAlleles) {
+		for (int i : posOfAllele) {
 			alleles.add(candidate.getAlternateAlleles().get(i));
 		}
 		return alleles;
 	}
 
-	private Genotype createGenotype(List<Allele> alleles) {
+	private Genotype createGenotype(List<Allele> alleles, Map<Integer, Boolean> use) {
 		List<Allele> filteredAlleles = new ArrayList<Allele>();
-		boolean het = nextDouble() <= 0.5;
 
+		int allele = use.keySet().iterator().next() +1;
 		// more the one alternative allele, do not use ref!
-		if (alleles.size() > 2) {
-			for (int i = 1; i < alleles.size(); i++) {
-				filteredAlleles.add(alleles.get(i));
+		if (use.size() > 1) {
+			for (int i : use.keySet()) {
+				filteredAlleles.add(alleles.get(i+1));
 			}
-		} else if (het) {
-			filteredAlleles = alleles;
+		} else if (use.get(allele-1)){
+			
+			filteredAlleles.add(alleles.get(allele));
+			filteredAlleles.add(alleles.get(allele));
 		} else {
-			filteredAlleles.add(alleles.get(1));
-			filteredAlleles.add(alleles.get(1));
+			filteredAlleles.add(alleles.get(0));
+			filteredAlleles.add(alleles.get(allele));
+			
 		}
 
 		return GenotypeBuilder.create("Sampled", filteredAlleles);
 	}
 
-	private List<Integer> useAlleles(VariantContext candidate) {
-		List<Integer> candidates = new ArrayList<Integer>();
+	private Map<Integer, Boolean> useAlleles(VariantContext candidate) {
+		Map<Integer, Boolean> candidates = new HashMap<Integer, Boolean>();
 
 		if (useAF()) {// AF flag
 			Object af = candidate.getCommonInfo().getAttribute(getAFIdentifier());
@@ -126,31 +133,41 @@ public class VCFSampler implements Iterator<VariantContext> {
 				if (((ArrayList<?>) af).get(0) instanceof String) {
 					int i = 0;
 					for (Object o : (ArrayList<?>) af) {
-						if (nextDouble() <= Double.parseDouble((String) o)) {
-							candidates.add(i);
-							i++;
-						}
+						addCandidateByHardyWeinberg(candidates, i, Double.parseDouble((String) o));
+						i++;
 					}
 				}
-			} else if (nextDouble() <= candidate.getCommonInfo().getAttributeAsDouble(getAFIdentifier(), 0.0))
-				candidates.add(0);
+			} else {
+				addCandidateByHardyWeinberg(candidates, 0,
+						candidate.getCommonInfo().getAttributeAsDouble(getAFIdentifier(), 0.0));
+			}
 		} else if (useCounts()) { // probability > 1
 			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++) {
-				if (getProbability() >= counts)
-					candidates.add(i);
-				if (selected <= (int) Math.ceil(getProbability())
-						&& nextDouble() <= Math.ceil(getProbability()) / (double) counts)
-					candidates.add(i);
+				this.position++;
+				if (selectAlleles.contains(position + i))
+					candidates.put(i, nextDouble() <= 0.5);
 			}
 
 		} else { // probability
 			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++) {
-				if (nextDouble() <= getProbability())
-					candidates.add(i);
+				addCandidateByHardyWeinberg(candidates, 0, getProbability());
 			}
 		}
 		return candidates;
 
+	}
+
+	private void addCandidateByHardyWeinberg(Map<Integer, Boolean> candidates, int i, double af) {
+		double[] homHetAF = getHardyWeinbergPrincipleHomhet(af);
+		double random = nextDouble();
+		if (random <= homHetAF[0])
+			candidates.put(i, true);
+		else if (random <= homHetAF[1])
+			candidates.put(i, false);
+	}
+
+	private double[] getHardyWeinbergPrincipleHomhet(double af) {
+		return new double[]{Math.pow(1.0-Math.sqrt(1.0-af),2),af};
 	}
 
 	private boolean useCounts() {
@@ -165,6 +182,10 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	public void setProbability(double probability) {
 		this.probability = probability;
+		if (useCounts()) {
+			VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(filePath);
+			setCounts(counter.getCounts());
+		}
 	}
 
 	public void setSample(String sample) {
@@ -195,8 +216,17 @@ public class VCFSampler implements Iterator<VariantContext> {
 		return ImmutableSet.<String> builder().add(getSample()).build();
 	}
 
-	public void setCounts(int counts) {
-		this.counts = counts;
+	private void setCounts(int counts) {
+		List<Integer> randomAlleles = new ArrayList<Integer>(counts);
+		for (int i = 0; i < counts; i++) {
+			randomAlleles.add(i);
+		}
+		Collections.shuffle(randomAlleles);
+		this.selectAlleles = new ArrayList<Integer>((int) Math.floor(getProbability()));
+		for (int i = 0; i < (int) Math.floor(getProbability()); i++) {
+			this.selectAlleles.add(randomAlleles.get(i));
+		}
+		Collections.sort(this.selectAlleles);
 	}
 
 	public void setAFIdentifier(String afIdentifier) {

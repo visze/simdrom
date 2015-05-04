@@ -12,7 +12,6 @@ import org.apache.commons.cli.ParseException;
 import de.charite.compbio.simdrom.cli.SIMdromSetting;
 import de.charite.compbio.simdrom.io.writer.VCFTSVWriter;
 import de.charite.compbio.simdrom.sampler.SpikeIn;
-import de.charite.compbio.simdrom.sampler.vcf.VCFAlternativeAlleleCounter;
 import de.charite.compbio.simdrom.sampler.vcf.VCFRandomSampleSelecter;
 import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
 
@@ -29,11 +28,6 @@ public class Main {
 
 		backgroundSampler.setProbability(SIMdromSetting.BACKGROUND_PROBABILITY);
 
-		if (SIMdromSetting.BACKGROUND_PROBABILITY > 1.0) {
-			VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(SIMdromSetting.BACKGROUND_VCF);
-			backgroundSampler.setCounts(counter.getCounts());
-		}
-
 		if (SIMdromSetting.ONLY_ONE_SAMPLE) {
 			VCFRandomSampleSelecter selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF);
 			backgroundSampler.setSample(selecter.getSample());
@@ -49,10 +43,6 @@ public class Main {
 
 			mutationSampler.setProbability(SIMdromSetting.MUTATIONS_PROBABILITY);
 
-			if (SIMdromSetting.MUTATIONS_PROBABILITY > 1.0) {
-				VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(SIMdromSetting.MUTATIONS_VCF);
-				mutationSampler.setCounts(counter.getCounts());
-			}
 		}
 
 		// writer
