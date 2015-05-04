@@ -79,6 +79,8 @@ public class VCFTSVWriter implements Closeable {
 				if (vc.getCommonInfo().hasAttribute(header)) {
 					record.add(formatVCFField(vc.getCommonInfo().getAttribute(header)));
 				}
+			} else {
+				record.add(VCFConstants.MISSING_VALUE_v4);
 			}
 		}
 		this.printer.printRecord(record);
