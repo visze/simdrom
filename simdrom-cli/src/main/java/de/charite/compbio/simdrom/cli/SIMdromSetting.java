@@ -1,5 +1,9 @@
 package de.charite.compbio.simdrom.cli;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.regex.Pattern;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -8,6 +12,11 @@ import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+
+import com.google.common.collect.ImmutableSet;
+
+import de.charite.compbio.simdrom.filter.IFilter;
+import de.charite.compbio.simdrom.filter.InfoFieldFilter;
 
 public class SIMdromSetting {
 
@@ -44,6 +53,8 @@ public class SIMdromSetting {
 	 * Spike in log file to get informations about the spike in.
 	 */
 	public static String SPLIKE_IN_LOGFILE;
+
+	public static ImmutableSet<IFilter> MUTATIONS_FILTERS = ImmutableSet.<IFilter> builder().build();
 
 	/**
 	 * parse the option arguments of the command line and set the static fields.
@@ -107,6 +118,13 @@ public class SIMdromSetting {
 				.withDescription("Optional. Path for a log file (TSV-Format) that descibes the spiked in mutations.");
 		options.addOption(OptionBuilder.create());
 
+		// mutations info filter
+		OptionBuilder.hasArgs();
+		OptionBuilder.withLongOpt("mutations-info-filter");
+		OptionBuilder
+				.withDescription("Optional. Uses the VCF info field to kepp only variants that passed the filter. Filter is written using the info field id followed by '=' and the value. Like CLNSIG=5");
+		options.addOption(OptionBuilder.create());
+
 		CommandLineParser parser = new GnuParser();
 		try {
 			CommandLine cmd = parser.parse(options, args);
@@ -126,12 +144,35 @@ public class SIMdromSetting {
 				ALLELE_FREQUENCY_IDENTIFIER = cmd.getOptionValue("allele-frequency-idenifier");
 			if (cmd.hasOption("spike-in-log"))
 				SPLIKE_IN_LOGFILE = cmd.getOptionValue("spike-in-log");
-
+			
+			Set<IFilter> filters = new HashSet<IFilter>();
+			if (cmd.hasOption("mutations-info-filter")) {
+				for (String opt : cmd.getOptionValues("mutations-info-filter")) {
+					String[] split = opt.split("=");
+					if (isInt(split[1])) {
+						filters.add(new InfoFieldFilter(split[0], Integer.parseInt(split[1])));
+					} else if (isDouble(split[1])) {
+						filters.add(new InfoFieldFilter(split[0], Double.parseDouble(split[1])));
+					} else {
+						filters.add(new InfoFieldFilter(split[0], split[1]));
+					}
+				}
+			}
+				
+			MUTATIONS_FILTERS = ImmutableSet.<IFilter> builder().addAll(filters).build();
 		} catch (MissingOptionException e) {
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp("SIMdrom", options);
 			System.exit(0);
 		}
+	}
+
+	private static boolean isDouble(String string) {
+		return  Pattern.matches("^\\d+.\\d+$", string);
+	}
+
+	private static boolean isInt(String string) {
+		return  Pattern.matches("^\\d+$", string);
 	}
 
 }

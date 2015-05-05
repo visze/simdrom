@@ -40,9 +40,8 @@ public class Main {
 		VCFSampler mutationSampler = null;
 		if (SIMdromSetting.MUTATIONS_VCF != null) {
 			mutationSampler = new VCFSampler(SIMdromSetting.MUTATIONS_VCF);
-
+			mutationSampler.setFilters(SIMdromSetting.MUTATIONS_FILTERS);
 			mutationSampler.setProbability(SIMdromSetting.MUTATIONS_PROBABILITY);
-
 		}
 
 		// writer

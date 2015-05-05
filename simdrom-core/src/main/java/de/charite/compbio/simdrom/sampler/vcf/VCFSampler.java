@@ -28,7 +28,8 @@ import java.util.Random;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multimap;
+
+import de.charite.compbio.simdrom.filter.IFilter;
 
 /**
  * @author Max Schubach <max.schubach@charite.de>
@@ -45,6 +46,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 	private CloseableIterator<VariantContext> iterator;
 	private Random random;
 	private String filePath;
+	private ImmutableSet<IFilter> filters;
 
 	public VCFSampler(String filePath) {
 		this.filePath = filePath;
@@ -55,6 +57,10 @@ public class VCFSampler implements Iterator<VariantContext> {
 		if (this.iterator == null)
 			this.iterator = this.parser.iterator();
 		return iterator;
+	}
+
+	public void setFilters(ImmutableSet<IFilter> filters) {
+		this.filters = filters;
 	}
 
 	@Override
@@ -71,7 +77,15 @@ public class VCFSampler implements Iterator<VariantContext> {
 	private VariantContext getNextVariant() {
 		VariantContext output = null;
 		while (getIterator().hasNext() && output == null) {
+			// get next line
 			VariantContext candidate = getIterator().next();
+			
+			// filter
+			candidate = filter(candidate);
+			if (candidate == null)
+				continue;
+
+			// get alleles by sampling method
 			Map<Integer, Boolean> alleles = useAlleles(candidate);
 			if (!alleles.isEmpty()) {
 				output = createVariantContextWithGenotype(candidate, alleles);
@@ -79,6 +93,13 @@ public class VCFSampler implements Iterator<VariantContext> {
 			}
 		}
 		return output;
+	}
+
+	private VariantContext filter(VariantContext candidate) {
+		for (IFilter iFilter : getFilters()) {
+			candidate = iFilter.filter(candidate);
+		}
+		return candidate;
 	}
 
 	private VariantContext createVariantContextWithGenotype(VariantContext candidate, Map<Integer, Boolean> alleles) {
@@ -89,7 +110,8 @@ public class VCFSampler implements Iterator<VariantContext> {
 			else
 				return null;
 		} else {
-			return new VariantContextBuilder(candidate).genotypes(createGenotype(candidate.getAlleles(),alleles)).make();
+			return new VariantContextBuilder(candidate).genotypes(createGenotype(candidate.getAlleles(), alleles))
+					.make();
 		}
 	}
 
@@ -105,20 +127,20 @@ public class VCFSampler implements Iterator<VariantContext> {
 	private Genotype createGenotype(List<Allele> alleles, Map<Integer, Boolean> use) {
 		List<Allele> filteredAlleles = new ArrayList<Allele>();
 
-		int allele = use.keySet().iterator().next() +1;
+		int allele = use.keySet().iterator().next() + 1;
 		// more the one alternative allele, do not use ref!
 		if (use.size() > 1) {
 			for (int i : use.keySet()) {
-				filteredAlleles.add(alleles.get(i+1));
+				filteredAlleles.add(alleles.get(i + 1));
 			}
-		} else if (use.get(allele-1)){
-			
+		} else if (use.get(allele - 1)) {
+
 			filteredAlleles.add(alleles.get(allele));
 			filteredAlleles.add(alleles.get(allele));
 		} else {
 			filteredAlleles.add(alleles.get(0));
 			filteredAlleles.add(alleles.get(allele));
-			
+
 		}
 
 		return GenotypeBuilder.create("Sampled", filteredAlleles);
@@ -167,7 +189,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 	}
 
 	private double[] getHardyWeinbergPrincipleHomhet(double af) {
-		return new double[]{Math.pow(1.0-Math.sqrt(1.0-af),2),af};
+		return new double[] { Math.pow(1.0 - Math.sqrt(1.0 - af), 2), af };
 	}
 
 	private boolean useCounts() {
@@ -183,7 +205,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 	public void setProbability(double probability) {
 		this.probability = probability;
 		if (useCounts()) {
-			VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(filePath);
+			VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(filePath, getFilters());
 			setCounts(counter.getCounts());
 		}
 	}
@@ -201,8 +223,6 @@ public class VCFSampler implements Iterator<VariantContext> {
 	}
 
 	public VCFHeader getFileHeader() {
-		// List<VCFHeaderLine> headerLines = new ArrayList<VCFHeaderLine>();
-		// headerLines.addAll();
 
 		Set<VCFHeaderLine> set = new LinkedHashSet<VCFHeaderLine>();
 		set.addAll(parser.getFileHeader().getMetaDataInInputOrder());
@@ -247,6 +267,12 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	public void close() {
 		parser.close();
+	}
+	
+	public ImmutableSet<IFilter> getFilters() {
+		if (filters == null)
+			filters = ImmutableSet.<IFilter>builder().build();
+		return filters;
 	}
 
 }

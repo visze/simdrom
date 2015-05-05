@@ -9,6 +9,10 @@ import htsjdk.variant.vcf.VCFFileReader;
 
 import java.io.File;
 
+import com.google.common.collect.ImmutableSet;
+
+import de.charite.compbio.simdrom.filter.IFilter;
+
 /**
  * @author Max Schubach <max.schubach@charite.de>
  *
@@ -16,10 +20,12 @@ import java.io.File;
 public class VCFAlternativeAlleleCounter {
 
 	private VCFFileReader parser;
+	 ImmutableSet<IFilter> filters;
 	private int counts = -1;
 
-	public VCFAlternativeAlleleCounter(String filePath) {
+	public VCFAlternativeAlleleCounter(String filePath, ImmutableSet<IFilter> filters) {
 		this.parser = new VCFFileReader(new File(filePath), false);
+		this.filters = filters;
 	}
 
 	public int getCounts() {
@@ -32,8 +38,12 @@ public class VCFAlternativeAlleleCounter {
 		counts = 0;
 		CloseableIterator<VariantContext> iterator = parser.iterator();
 		while (iterator.hasNext()) {
-			counts += iterator.next().getAlternateAlleles().size();
-			iterator.next();
+			VariantContext vc = iterator.next();
+			for (IFilter iFilter : filters) {
+				vc = iFilter.filter(vc);
+			}
+			if (vc != null)
+				counts += vc.getAlternateAlleles().size();
 		}
 		parser.close();
 	}
