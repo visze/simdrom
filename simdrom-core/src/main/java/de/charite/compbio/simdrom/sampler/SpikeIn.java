@@ -3,6 +3,8 @@ package de.charite.compbio.simdrom.sampler;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFHeader;
 import htsjdk.variant.vcf.VCFHeaderLine;
+import htsjdk.variant.vcf.VCFHeaderLineType;
+import htsjdk.variant.vcf.VCFInfoHeaderLine;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -38,15 +40,16 @@ public class SpikeIn implements Iterator<VariantContext> {
 	}
 
 	public VCFHeader getVCFHeader() {
+		Set<VCFHeaderLine> metaData = new LinkedHashSet<VCFHeaderLine>();
+		metaData.addAll(backgroundSampler.getFileHeader().getMetaDataInInputOrder());
+		// FIXME workaround for ExAC and 1000 genome data
+		metaData.add(new VCFInfoHeaderLine("OLD_VARIANT", 1, VCFHeaderLineType.String,
+				"Flag in 1000 genomes that is not set in the header"));
 		if (mutationSampler != null) {
-			Set<VCFHeaderLine> metaData = new LinkedHashSet<VCFHeaderLine>();
-			metaData.addAll(backgroundSampler.getFileHeader().getMetaDataInInputOrder());
 			metaData.addAll(mutationSampler.getFileHeader().getMetaDataInInputOrder());
-			return new VCFHeader(metaData, backgroundSampler.getSampleNames());
-
-		} else
-			return new VCFHeader(backgroundSampler.getFileHeader().getMetaDataInInputOrder(),
-					backgroundSampler.getSampleNames());
+		
+		}
+		return new VCFHeader(metaData, backgroundSampler.getSampleNames());
 	}
 
 	@Override
