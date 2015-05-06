@@ -73,6 +73,12 @@ public class VCFSampler implements Iterator<VariantContext> {
 	public VariantContext next() {
 		return getNextVariant();
 	}
+	
+	@Override
+	public void remove() {
+	    throw new UnsupportedOperationException();
+	}
+
 
 	private VariantContext getNextVariant() {
 		VariantContext output = null;

@@ -61,6 +61,11 @@ public class SpikeIn implements Iterator<VariantContext> {
 	public VariantContext next() {
 		return getNextVariantContext();
 	}
+	
+	@Override
+	public void remove() {
+	    throw new UnsupportedOperationException();
+	}
 
 	private VariantContext getNextVariantContext() {
 		VariantContext output = null;
