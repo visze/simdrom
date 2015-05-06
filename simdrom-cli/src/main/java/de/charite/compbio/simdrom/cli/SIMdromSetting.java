@@ -67,6 +67,26 @@ public class SIMdromSetting {
 	 */
 	public static String MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER;
 	/**
+	 * Identifier in the info-String of the ALT allele count in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 */
+	public static String BACKGROUND_ALT_ALLELE_COUNT;
+	/**
+	 * Identifier in the info-String of the ALT allele count in the
+	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 */
+	public static String MUTATIONS_ALT_ALLELE_COUNT;
+	/**
+	 * Identifier in the info-String of the all allele count in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 */
+	public static String BACKGROUND_ALLELE_COUNT;
+	/**
+	 * Identifier in the info-String of the all allele count in the
+	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 */
+	public static String MUTATIONS_ALLELE_COUNT;
+	/**
 	 * Spike in log file to get informations about the spike in.
 	 */
 	public static String SPLIKE_IN_LOGFILE;
@@ -133,19 +153,46 @@ public class SIMdromSetting {
 				.withDescription("Default false. If present, a random sample will be chosen of the background VCF.");
 		options.addOption(OptionBuilder.create());
 
-		// background allele frequency indentifier
+		// background allele frequency identifier
 		OptionBuilder.hasArg();
 		OptionBuilder.withLongOpt("background-allele-frequency-idenifier");
 		OptionBuilder
 				.withDescription("Optional. If set, the identifier in the info string of the background VCF will be used as single probabilities to call variants.");
 		options.addOption(OptionBuilder.create("bAF"));
 
-		// mutations allele frequency indentifier
+		// mutations allele frequency identifier
 		OptionBuilder.hasArg();
 		OptionBuilder.withLongOpt("mutations-allele-frequency-idenifier");
 		OptionBuilder
 				.withDescription("Optional. If set, the identifier in the info string of the mutations VCF will be used as single probabilities to call variants.");
 		options.addOption(OptionBuilder.create("mAF"));
+
+		// background allele ALT allele count
+		OptionBuilder.hasArg();
+		OptionBuilder.withLongOpt("background-alt-allele-count");
+		OptionBuilder
+				.withDescription("Optional. If set, the identifier in the info string of the background VCF will be used to compute single probabilities per variant. (bAC/bAN)");
+		options.addOption(OptionBuilder.create("bAC"));
+
+		// mutations allele ALT allele count
+		OptionBuilder.hasArg();
+		OptionBuilder.withLongOpt("mutations-alt-allele-count");
+		OptionBuilder
+				.withDescription("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single probabilities per variant. (mAC/mAN)");
+		options.addOption(OptionBuilder.create("mAC"));
+		// background allele allele count
+		OptionBuilder.hasArg();
+		OptionBuilder.withLongOpt("background-allele-count");
+		OptionBuilder
+				.withDescription("Optional. If set, the identifier in the info string of the background VCF will be used to compute single probabilities per variant. (bAC/bAN)");
+		options.addOption(OptionBuilder.create("bAN"));
+
+		// mutations allele allele count
+		OptionBuilder.hasArg();
+		OptionBuilder.withLongOpt("mutations-allele-count");
+		OptionBuilder
+				.withDescription("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single probabilities per variant. (mAC/mAN)");
+		options.addOption(OptionBuilder.create("mAN"));
 
 		// spike in log
 		OptionBuilder.hasArg();
@@ -170,9 +217,11 @@ public class SIMdromSetting {
 
 			// check if input is correct
 			checkNotAllowedOptions(cmd, "background-probability", "background-variants-amount",
-					"background-allele-frequency-idenifier");
+					"background-allele-frequency-idenifier", "background-allele-count");
 			checkNotAllowedOptions(cmd, "mutations-probability", "mutations-variants-amount",
-					"mutations-allele-frequency-idenifier");
+					"mutations-allele-frequency-idenifier", "mutations-allele-count");
+			checkMissingOption(cmd, "background-allele-count", "background-alt-allele-count");
+			checkMissingOption(cmd, "mutations-allele-count", "mutations-alt-allele-count");
 
 			BACKGROUND_VCF = cmd.getOptionValue("background-population");
 			if (cmd.hasOption("mutations"))
@@ -198,6 +247,20 @@ public class SIMdromSetting {
 			}
 			if (cmd.hasOption("mutations-allele-frequency-idenifier")) {
 				MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER = cmd.getOptionValue("mutations-allele-frequency-idenifier");
+			}
+			// AC identifier
+			if (cmd.hasOption("background-alt-allele-count")) {
+				BACKGROUND_ALT_ALLELE_COUNT = cmd.getOptionValue("background-alt-allele-count");
+			}
+			if (cmd.hasOption("mutations-alt-allele-count")) {
+				MUTATIONS_ALT_ALLELE_COUNT = cmd.getOptionValue("mutations-alt-allele-count");
+			}
+			// AN identifier
+			if (cmd.hasOption("background-allele-count")) {
+				BACKGROUND_ALLELE_COUNT = cmd.getOptionValue("background-allele-count");
+			}
+			if (cmd.hasOption("mutations-allele-count")) {
+				MUTATIONS_ALLELE_COUNT = cmd.getOptionValue("mutations-allele-count");
 			}
 			// single sample
 			if (cmd.hasOption("single-sample"))
@@ -225,13 +288,14 @@ public class SIMdromSetting {
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp("SIMdrom", options);
 			System.exit(0);
-		} catch (NotAllowedCombinationOfOptionsException e) {
+		} catch (NotAllowedCombinationOfOptionsException | MissingOptionsException e) {
 			e.printStackTrace();
 			System.exit(0);
 		}
 	}
 
-	private static void checkNotAllowedOptions(CommandLine cmd, String... values) throws NotAllowedCombinationOfOptionsException {
+	private static void checkNotAllowedOptions(CommandLine cmd, String... values)
+			throws NotAllowedCombinationOfOptionsException {
 		List<String> falseOptions = new ArrayList<String>();
 		for (String opt : values) {
 			if (cmd.hasOption(opt))
@@ -239,6 +303,19 @@ public class SIMdromSetting {
 		}
 		if (falseOptions.size() > 1)
 			throw new NotAllowedCombinationOfOptionsException(falseOptions);
+	}
+
+	private static void checkMissingOption(CommandLine cmd, String... values) throws MissingOptionsException {
+		List<String> missingOptions = new ArrayList<String>();
+		List<String> usedOptions = new ArrayList<String>();
+		for (String opt : values) {
+			if (cmd.hasOption(opt))
+				usedOptions.add(opt);
+			else
+				missingOptions.add(opt);
+		}
+		if (usedOptions.size() > 0 && missingOptions.size() > 0)
+			throw new MissingOptionsException(usedOptions, missingOptions);
 	}
 
 	private static boolean isDouble(String string) {

@@ -34,6 +34,10 @@ public class Main {
 		if (SIMdromSetting.BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER != null) {
 			backgroundSampler.setAFIdentifier(SIMdromSetting.BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER);
 		}
+		if (SIMdromSetting.BACKGROUND_ALT_ALLELE_COUNT != null && SIMdromSetting.BACKGROUND_ALLELE_COUNT != null) {
+			backgroundSampler.setACIdentifier(SIMdromSetting.BACKGROUND_ALT_ALLELE_COUNT);
+			backgroundSampler.setANIdentifier(SIMdromSetting.BACKGROUND_ALLELE_COUNT);
+		}
 		if (SIMdromSetting.BACKGROUND_VARIANT_NUMBER > 0) {
 			backgroundSampler.setVariantsAmount(SIMdromSetting.BACKGROUND_VARIANT_NUMBER);
 		}
@@ -48,6 +52,10 @@ public class Main {
 			}
 			if (SIMdromSetting.MUTATIONS_VARIANT_NUMBER > 0) {
 				mutationSampler.setVariantsAmount(SIMdromSetting.MUTATIONS_VARIANT_NUMBER);
+			}
+			if (SIMdromSetting.MUTATIONS_ALT_ALLELE_COUNT != null && SIMdromSetting.MUTATIONS_ALLELE_COUNT != null) {
+				mutationSampler.setACIdentifier(SIMdromSetting.MUTATIONS_ALT_ALLELE_COUNT);
+				mutationSampler.setANIdentifier(SIMdromSetting.MUTATIONS_ALLELE_COUNT);
 			}
 		}
 

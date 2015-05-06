@@ -42,6 +42,8 @@ public class VCFSampler implements Iterator<VariantContext> {
 	private int variantsAmount;
 	private int position = -1;
 	private String afIdentifier;
+	private String acIdentifier;
+	private String anIdentifier;
 	private String sample = null;
 	private VCFFileReader parser;
 	private CloseableIterator<VariantContext> iterator;
@@ -74,19 +76,18 @@ public class VCFSampler implements Iterator<VariantContext> {
 	public VariantContext next() {
 		return getNextVariant();
 	}
-	
+
 	@Override
 	public void remove() {
-	    throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException();
 	}
-
 
 	private VariantContext getNextVariant() {
 		VariantContext output = null;
 		while (getIterator().hasNext() && output == null) {
 			// get next line
 			VariantContext candidate = getIterator().next();
-			
+
 			// filter
 			candidate = filter(candidate);
 			if (candidate == null)
@@ -170,6 +171,21 @@ public class VCFSampler implements Iterator<VariantContext> {
 				addCandidateByHardyWeinberg(candidates, 0,
 						candidate.getCommonInfo().getAttributeAsDouble(getAFIdentifier(), 0.0));
 			}
+		} else if (useAC()) {
+			Object ac = candidate.getCommonInfo().getAttribute(getACIdentifier());
+			int an = candidate.getCommonInfo().getAttributeAsInt(getANIdentifier(), 0);
+			if (ac instanceof ArrayList<?>) {
+				if (((ArrayList<?>) ac).get(0) instanceof String) {
+					int i = 0;
+					for (Object o : (ArrayList<?>) ac) {
+						addCandidateByHardyWeinberg(candidates, i, Double.parseDouble((String) o) / (double) an);
+						i++;
+					}
+				}
+			} else {
+				addCandidateByHardyWeinberg(candidates, 0, (double) candidate.getCommonInfo().getAttributeAsInt(getACIdentifier(), 0) / (double) an);
+			}
+
 		} else if (useCounts()) { // variantsAmount > 0
 			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++) {
 				this.position++;
@@ -184,6 +200,10 @@ public class VCFSampler implements Iterator<VariantContext> {
 		}
 		return candidates;
 
+	}
+
+	private boolean useAC() {
+		return getACIdentifier() != null && getANIdentifier() != null;
 	}
 
 	private void addCandidateByHardyWeinberg(Map<Integer, Boolean> candidates, int i, double af) {
@@ -259,11 +279,11 @@ public class VCFSampler implements Iterator<VariantContext> {
 	public void setAFIdentifier(String afIdentifier) {
 		this.afIdentifier = afIdentifier;
 	}
-	
+
 	public void setVariantsAmount(int variantsAmount) {
 		this.variantsAmount = variantsAmount;
 	}
-	
+
 	public int getVariantsAmount() {
 		return variantsAmount;
 	}
@@ -283,11 +303,27 @@ public class VCFSampler implements Iterator<VariantContext> {
 	public void close() {
 		parser.close();
 	}
-	
+
 	public ImmutableSet<IFilter> getFilters() {
 		if (filters == null)
-			filters = ImmutableSet.<IFilter>builder().build();
+			filters = ImmutableSet.<IFilter> builder().build();
 		return filters;
+	}
+
+	public String getACIdentifier() {
+		return acIdentifier;
+	}
+
+	public void setACIdentifier(String acIdentifier) {
+		this.acIdentifier = acIdentifier;
+	}
+
+	public String getANIdentifier() {
+		return anIdentifier;
+	}
+
+	public void setANIdentifier(String anIdentifier) {
+		this.anIdentifier = anIdentifier;
 	}
 
 }
