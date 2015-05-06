@@ -39,8 +39,11 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	private double probability;
 	private List<Integer> selectAlleles;
+	private int variantsAmount;
 	private int position = -1;
 	private String afIdentifier;
+	private String acIdentifier;
+	private String anIdentifier;
 	private String sample = null;
 	private VCFFileReader parser;
 	private CloseableIterator<VariantContext> iterator;
@@ -73,19 +76,18 @@ public class VCFSampler implements Iterator<VariantContext> {
 	public VariantContext next() {
 		return getNextVariant();
 	}
-	
+
 	@Override
 	public void remove() {
-	    throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException();
 	}
-
 
 	private VariantContext getNextVariant() {
 		VariantContext output = null;
 		while (getIterator().hasNext() && output == null) {
 			// get next line
 			VariantContext candidate = getIterator().next();
-			
+
 			// filter
 			candidate = filter(candidate);
 			if (candidate == null)
@@ -169,7 +171,23 @@ public class VCFSampler implements Iterator<VariantContext> {
 				addCandidateByHardyWeinberg(candidates, 0,
 						candidate.getCommonInfo().getAttributeAsDouble(getAFIdentifier(), 0.0));
 			}
-		} else if (useCounts()) { // probability > 1
+		} else if (useAC()) {
+			Object ac = candidate.getCommonInfo().getAttribute(getACIdentifier());
+			int an = candidate.getCommonInfo().getAttributeAsInt(getANIdentifier(), 0);
+			if (ac instanceof ArrayList<?>) {
+				if (((ArrayList<?>) ac).get(0) instanceof String) {
+					int i = 0;
+					for (Object o : (ArrayList<?>) ac) {
+						addCandidateByHardyWeinberg(candidates, i, Double.parseDouble((String) o) / (double) an);
+						i++;
+					}
+				}
+			} else {
+				addCandidateByHardyWeinberg(candidates, 0,
+						(double) candidate.getCommonInfo().getAttributeAsInt(getACIdentifier(), 0) / (double) an);
+			}
+
+		} else if (useCounts()) { // variantsAmount > 0
 			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++) {
 				this.position++;
 				if (selectAlleles.contains(position + i))
@@ -183,6 +201,10 @@ public class VCFSampler implements Iterator<VariantContext> {
 		}
 		return candidates;
 
+	}
+
+	private boolean useAC() {
+		return getACIdentifier() != null && getANIdentifier() != null;
 	}
 
 	private void addCandidateByHardyWeinberg(Map<Integer, Boolean> candidates, int i, double af) {
@@ -199,7 +221,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 	}
 
 	private boolean useCounts() {
-		return probability > 1.0;
+		return getVariantsAmount() > 0;
 	}
 
 	private double nextDouble() {
@@ -248,8 +270,8 @@ public class VCFSampler implements Iterator<VariantContext> {
 			randomAlleles.add(i);
 		}
 		Collections.shuffle(randomAlleles);
-		this.selectAlleles = new ArrayList<Integer>((int) Math.floor(getProbability()));
-		for (int i = 0; i < (int) Math.floor(getProbability()); i++) {
+		this.selectAlleles = new ArrayList<Integer>(getVariantsAmount());
+		for (int i = 0; i < getVariantsAmount(); i++) {
 			this.selectAlleles.add(randomAlleles.get(i));
 		}
 		Collections.sort(this.selectAlleles);
@@ -257,6 +279,14 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	public void setAFIdentifier(String afIdentifier) {
 		this.afIdentifier = afIdentifier;
+	}
+
+	public void setVariantsAmount(int variantsAmount) {
+		this.variantsAmount = variantsAmount;
+	}
+
+	public int getVariantsAmount() {
+		return variantsAmount;
 	}
 
 	public String getAFIdentifier() {
@@ -274,11 +304,27 @@ public class VCFSampler implements Iterator<VariantContext> {
 	public void close() {
 		parser.close();
 	}
-	
+
 	public ImmutableSet<IFilter> getFilters() {
 		if (filters == null)
-			filters = ImmutableSet.<IFilter>builder().build();
+			filters = ImmutableSet.<IFilter> builder().build();
 		return filters;
+	}
+
+	public String getACIdentifier() {
+		return acIdentifier;
+	}
+
+	public void setACIdentifier(String acIdentifier) {
+		this.acIdentifier = acIdentifier;
+	}
+
+	public String getANIdentifier() {
+		return anIdentifier;
+	}
+
+	public void setANIdentifier(String anIdentifier) {
+		this.anIdentifier = anIdentifier;
 	}
 
 }
