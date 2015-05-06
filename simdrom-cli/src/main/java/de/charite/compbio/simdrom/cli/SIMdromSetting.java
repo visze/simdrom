@@ -286,6 +286,7 @@ public class SIMdromSetting {
 			MUTATIONS_FILTERS = ImmutableSet.<IFilter> builder().addAll(filters).build();
 		} catch (MissingOptionException e) {
 			HelpFormatter formatter = new HelpFormatter();
+			formatter.setWidth(120);
 			formatter.printHelp("SIMdrom", options);
 			System.exit(0);
 		} catch (NotAllowedCombinationOfOptionsException | MissingOptionsException e) {
