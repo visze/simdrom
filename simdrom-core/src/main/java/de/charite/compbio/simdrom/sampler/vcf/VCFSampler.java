@@ -183,7 +183,8 @@ public class VCFSampler implements Iterator<VariantContext> {
 					}
 				}
 			} else {
-				addCandidateByHardyWeinberg(candidates, 0, (double) candidate.getCommonInfo().getAttributeAsInt(getACIdentifier(), 0) / (double) an);
+				addCandidateByHardyWeinberg(candidates, 0,
+						(double) candidate.getCommonInfo().getAttributeAsInt(getACIdentifier(), 0) / (double) an);
 			}
 
 		} else if (useCounts()) { // variantsAmount > 0
