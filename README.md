@@ -17,7 +17,7 @@ There are two typical use-cases where you can use SIMdrom.
 
 ### Use 1000 Genomes to generate a random genome
 
-Download the *.sites.vcf.gz from [1000Genomes](ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/) and the corresponding index file *.sites.vcf.gz.tbi. The VCF-file should contain a `AF` identifier in the info column.
+Download the *.sites.vcf.gz from 1000Genomes - ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/ - and the corresponding index file *.sites.vcf.gz.tbi. The VCF-file should contain a `AF` identifier in the info column.
 
 Run SIMdrom with the downloaded VCF file
 ```
@@ -34,7 +34,7 @@ or generate a bgziped file
 
 ### Use ExAC to generate a random Exome
 
-Download the current ExAC release from the [Broadinstitute FTP](ftp://ftp.broadinstitute.org/pub/ExAC_release/) and the corresponding index file. The VCF-file should contain a `AF` identifier in the info column.
+Download the current ExAC release from the Broadinstitute FTP - ftp://ftp.broadinstitute.org/pub/ExAC_release/ - and the corresponding index file. The VCF-file should contain a `AF` identifier in the info column.
 
 Run SIMdrom with the downloaded VCF file
 ```
@@ -81,7 +81,7 @@ For example if you want to sample an american individual use the following comma
 
 ### Randomly select one genome of 1000Genomes
 
-You can also just select one genotype of an individual of a 1000genomes sample. Therefore you have to download the genotype VCF files from [1000Genomes](ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/) and the corresponding index files. Right now, SIMdrom can only use one input VCF as background population. Therefore you have to merge the files that are divided by chromosome. Now you can use the `--single-sample` option to select only one genotype.
+You can also just select one genotype of an individual of a 1000genomes sample. Therefore you have to download the genotype VCF files from 1000Genomes - ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/ - and the corresponding index files. Right now, SIMdrom can only use one input VCF as background population. Therefore you have to merge the files that are divided by chromosome. Now you can use the `--single-sample` option to select only one genotype.
 
  ```
 # java -jar ALL.ALLChr.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -bAC AC_AMR -bAN AN_AMR
@@ -90,7 +90,7 @@ You can also just select one genotype of an individual of a 1000genomes sample. 
 
 ### Spike in a pathogenic mutation of ClinVar
 
-Download the ClinVar VCF ind index file from the [NCBI FTP](ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/). Not every included variant is known as pathogenic. To use only the known pathogenic variants we have to use the info column filter of SIMdrom on the mutations file: `--mutations-info-filter`. The pathogenicity is decoded in the `CLNSIG` identifier with the number `5`. The corresponding SIMdrom option is `--mutations-info-filter CLNSIG=5`.
+Download the ClinVar VCF ind index file from the NCBI FTP - ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/. Not every included variant is known as pathogenic. To use only the known pathogenic variants we have to use the info column filter of SIMdrom on the mutations file: `--mutations-info-filter`. The pathogenicity is decoded in the `CLNSIG` identifier with the number `5`. The corresponding SIMdrom option is `--mutations-info-filter CLNSIG=5`.
 
 If we only want to spike in 1 mutation we have to use the `--mutations-variants-amount` with the value `1`. We can increase the value if we want more spiked in mutations. Every mutation has an equal probability to be chosen.
 
