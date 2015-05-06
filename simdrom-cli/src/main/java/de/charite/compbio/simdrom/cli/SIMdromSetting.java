@@ -1,6 +1,8 @@
 package de.charite.compbio.simdrom.cli;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -35,20 +37,35 @@ public class SIMdromSetting {
 	 */
 	public static double BACKGROUND_PROBABILITY = 1.0;
 	/**
+	 * If set only the exact number of variants will be selected in the
+	 * {@link SIMdromSetting#BACKGROUND_VCF}.
+	 */
+	public static int BACKGROUND_VARIANT_NUMBER;
+	/**
 	 * Probability so choose a mutation in the
 	 * {@link SIMdromSetting#MUTATIONS_VCF}.
 	 */
 	public static double MUTATIONS_PROBABILITY = 1.0;
 	/**
+	 * If set only the exact number of variants will be selected in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF}.
+	 */
+	public static int MUTATIONS_VARIANT_NUMBER;
+	/**
 	 * If set only one random sample will be selected of the
-	 * {@link SIMdromSetting#BACKGROUND_VCF}.
+	 * {@link SIMdromSetting#MUTATIONS_VCF}.
 	 */
 	public static boolean ONLY_ONE_SAMPLE = false;
 	/**
 	 * Identifier in the info-String of the allele frequency in the
 	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
 	 */
-	public static String ALLELE_FREQUENCY_IDENTIFIER;
+	public static String BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER;
+	/**
+	 * Identifier in the info-String of the allele frequency in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 */
+	public static String MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER;
 	/**
 	 * Spike in log file to get informations about the spike in.
 	 */
@@ -87,15 +104,27 @@ public class SIMdromSetting {
 		// background probability
 		OptionBuilder.hasArg();
 		OptionBuilder.withLongOpt("background-probability");
+		OptionBuilder.withDescription("Default 1.0. Choose variants with this probability.");
+		options.addOption(OptionBuilder.create());
+
+		// background exact counts
+		OptionBuilder.hasArg();
+		OptionBuilder.withLongOpt("background-variants-amount");
 		OptionBuilder
-				.withDescription("Default 1.0. Choose variants with this probability. If larger than 1 the exact number of variants will be chosen (round down).");
+				.withDescription("Optional. Choose exact the given number of variants in the background population.");
 		options.addOption(OptionBuilder.create());
 
 		// mutations probability
 		OptionBuilder.hasArg();
 		OptionBuilder.withLongOpt("mutations-probability");
+		OptionBuilder.withDescription("Default 1.0. Choose mutations with this probability.");
+		options.addOption(OptionBuilder.create());
+
+		// background exact counts
+		OptionBuilder.hasArg();
+		OptionBuilder.withLongOpt("mutations-variants-amount");
 		OptionBuilder
-				.withDescription("Default 1.0. Choose mutations with this probability. If larger than 1 the exact number of variants will be chosen (round down).");
+				.withDescription("Optional. Choose exact the given number of variants in the mutation population.");
 		options.addOption(OptionBuilder.create());
 
 		// only one sample
@@ -104,12 +133,19 @@ public class SIMdromSetting {
 				.withDescription("Default false. If present, a random sample will be chosen of the background VCF.");
 		options.addOption(OptionBuilder.create());
 
-		// only one sample
+		// background allele frequency indentifier
 		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("allele-frequency-idenifier");
+		OptionBuilder.withLongOpt("background-allele-frequency-idenifier");
 		OptionBuilder
 				.withDescription("Optional. If set, the identifier in the info string of the background VCF will be used as single probabilities to call variants.");
-		options.addOption(OptionBuilder.create("AF"));
+		options.addOption(OptionBuilder.create("bAF"));
+
+		// mutations allele frequency indentifier
+		OptionBuilder.hasArg();
+		OptionBuilder.withLongOpt("mutations-allele-frequency-idenifier");
+		OptionBuilder
+				.withDescription("Optional. If set, the identifier in the info string of the mutations VCF will be used as single probabilities to call variants.");
+		options.addOption(OptionBuilder.create("mAF"));
 
 		// spike in log
 		OptionBuilder.hasArg();
@@ -131,20 +167,45 @@ public class SIMdromSetting {
 			if (args.length == 0 || cmd.hasOption("h")) {
 				throw new MissingOptionException("Please Insert an argument");
 			}
+
+			// check if input is correct
+			checkNotAllowedOptions(cmd, "background-probability", "background-variants-amount",
+					"background-allele-frequency-idenifier");
+			checkNotAllowedOptions(cmd, "mutations-probability", "mutations-variants-amount",
+					"mutations-allele-frequency-idenifier");
+
 			BACKGROUND_VCF = cmd.getOptionValue("background-population");
 			if (cmd.hasOption("mutations"))
 				MUTATIONS_VCF = cmd.getOptionValue("mutations");
-			if (cmd.hasOption("background-probability"))
+
+			// probabilities
+			if (cmd.hasOption("background-probability")) {
 				BACKGROUND_PROBABILITY = Double.parseDouble(cmd.getOptionValue("background-probability"));
-			if (cmd.hasOption("mutations-probability"))
+			}
+			if (cmd.hasOption("mutations-probability")) {
 				MUTATIONS_PROBABILITY = Double.parseDouble(cmd.getOptionValue("mutations-probability"));
+			}
+			// variant counts
+			if (cmd.hasOption("background-variants-amount")) {
+				BACKGROUND_VARIANT_NUMBER = Integer.parseInt(cmd.getOptionValue("background-variants-amount"));
+			}
+			if (cmd.hasOption("mutations-variants-amount")) {
+				MUTATIONS_VARIANT_NUMBER = Integer.parseInt(cmd.getOptionValue("mutations-variants-amount"));
+			}
+			// AF identifier
+			if (cmd.hasOption("background-allele-frequency-idenifier")) {
+				BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER = cmd.getOptionValue("background-allele-frequency-idenifier");
+			}
+			if (cmd.hasOption("mutations-allele-frequency-idenifier")) {
+				MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER = cmd.getOptionValue("mutations-allele-frequency-idenifier");
+			}
+			// single sample
 			if (cmd.hasOption("single-sample"))
 				ONLY_ONE_SAMPLE = true;
-			if (cmd.hasOption("allele-frequency-idenifier"))
-				ALLELE_FREQUENCY_IDENTIFIER = cmd.getOptionValue("allele-frequency-idenifier");
+
 			if (cmd.hasOption("spike-in-log"))
 				SPLIKE_IN_LOGFILE = cmd.getOptionValue("spike-in-log");
-			
+
 			Set<IFilter> filters = new HashSet<IFilter>();
 			if (cmd.hasOption("mutations-info-filter")) {
 				for (String opt : cmd.getOptionValues("mutations-info-filter")) {
@@ -158,21 +219,34 @@ public class SIMdromSetting {
 					}
 				}
 			}
-				
+
 			MUTATIONS_FILTERS = ImmutableSet.<IFilter> builder().addAll(filters).build();
 		} catch (MissingOptionException e) {
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp("SIMdrom", options);
 			System.exit(0);
+		} catch (NotAllowedCombinationOfOptionsException e) {
+			e.printStackTrace();
+			System.exit(0);
 		}
 	}
 
+	private static void checkNotAllowedOptions(CommandLine cmd, String... values) throws NotAllowedCombinationOfOptionsException {
+		List<String> falseOptions = new ArrayList<String>();
+		for (String opt : values) {
+			if (cmd.hasOption(opt))
+				falseOptions.add(opt);
+		}
+		if (falseOptions.size() > 1)
+			throw new NotAllowedCombinationOfOptionsException(falseOptions);
+	}
+
 	private static boolean isDouble(String string) {
-		return  Pattern.matches("^\\d+.\\d+$", string);
+		return Pattern.matches("^\\d+.\\d+$", string);
 	}
 
 	private static boolean isInt(String string) {
-		return  Pattern.matches("^\\d+$", string);
+		return Pattern.matches("^\\d+$", string);
 	}
 
 }

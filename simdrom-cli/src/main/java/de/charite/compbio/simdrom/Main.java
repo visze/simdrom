@@ -27,14 +27,15 @@ public class Main {
 		VCFSampler backgroundSampler = new VCFSampler(SIMdromSetting.BACKGROUND_VCF);
 
 		backgroundSampler.setProbability(SIMdromSetting.BACKGROUND_PROBABILITY);
-
 		if (SIMdromSetting.ONLY_ONE_SAMPLE) {
 			VCFRandomSampleSelecter selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF);
 			backgroundSampler.setSample(selecter.getSample());
 		}
-
-		if (SIMdromSetting.ALLELE_FREQUENCY_IDENTIFIER != null) {
-			backgroundSampler.setAFIdentifier(SIMdromSetting.ALLELE_FREQUENCY_IDENTIFIER);
+		if (SIMdromSetting.BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER != null) {
+			backgroundSampler.setAFIdentifier(SIMdromSetting.BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER);
+		}
+		if (SIMdromSetting.BACKGROUND_VARIANT_NUMBER > 0) {
+			backgroundSampler.setVariantsAmount(SIMdromSetting.BACKGROUND_VARIANT_NUMBER);
 		}
 
 		VCFSampler mutationSampler = null;
@@ -42,6 +43,12 @@ public class Main {
 			mutationSampler = new VCFSampler(SIMdromSetting.MUTATIONS_VCF);
 			mutationSampler.setFilters(SIMdromSetting.MUTATIONS_FILTERS);
 			mutationSampler.setProbability(SIMdromSetting.MUTATIONS_PROBABILITY);
+			if (SIMdromSetting.MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER != null) {
+				mutationSampler.setAFIdentifier(SIMdromSetting.MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER);
+			}
+			if (SIMdromSetting.MUTATIONS_VARIANT_NUMBER > 0) {
+				mutationSampler.setVariantsAmount(SIMdromSetting.MUTATIONS_VARIANT_NUMBER);
+			}
 		}
 
 		// writer
