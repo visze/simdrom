@@ -155,14 +155,14 @@ public class SIMdromSetting {
 
 		// background allele frequency identifier
 		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("background-allele-frequency-idenifier");
+		OptionBuilder.withLongOpt("background-allele-frequency-identifier");
 		OptionBuilder
 				.withDescription("Optional. If set, the identifier in the info string of the background VCF will be used as single probabilities to call variants.");
 		options.addOption(OptionBuilder.create("bAF"));
 
 		// mutations allele frequency identifier
 		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("mutations-allele-frequency-idenifier");
+		OptionBuilder.withLongOpt("mutations-allele-frequency-identifier");
 		OptionBuilder
 				.withDescription("Optional. If set, the identifier in the info string of the mutations VCF will be used as single probabilities to call variants.");
 		options.addOption(OptionBuilder.create("mAF"));
@@ -217,9 +217,9 @@ public class SIMdromSetting {
 
 			// check if input is correct
 			checkNotAllowedOptions(cmd, "background-probability", "background-variants-amount",
-					"background-allele-frequency-idenifier", "background-allele-count");
+					"background-allele-frequency-identifier", "background-allele-count");
 			checkNotAllowedOptions(cmd, "mutations-probability", "mutations-variants-amount",
-					"mutations-allele-frequency-idenifier", "mutations-allele-count");
+					"mutations-allele-frequency-identifier", "mutations-allele-count");
 			checkMissingOption(cmd, "background-allele-count", "background-alt-allele-count");
 			checkMissingOption(cmd, "mutations-allele-count", "mutations-alt-allele-count");
 
@@ -242,11 +242,11 @@ public class SIMdromSetting {
 				MUTATIONS_VARIANT_NUMBER = Integer.parseInt(cmd.getOptionValue("mutations-variants-amount"));
 			}
 			// AF identifier
-			if (cmd.hasOption("background-allele-frequency-idenifier")) {
-				BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER = cmd.getOptionValue("background-allele-frequency-idenifier");
+			if (cmd.hasOption("background-allele-frequency-identifier")) {
+				BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER = cmd.getOptionValue("background-allele-frequency-identifier");
 			}
-			if (cmd.hasOption("mutations-allele-frequency-idenifier")) {
-				MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER = cmd.getOptionValue("mutations-allele-frequency-idenifier");
+			if (cmd.hasOption("mutations-allele-frequency-identifier")) {
+				MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER = cmd.getOptionValue("mutations-allele-frequency-identifier");
 			}
 			// AC identifier
 			if (cmd.hasOption("background-alt-allele-count")) {
