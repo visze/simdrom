@@ -1,1 +1,202 @@
-Hello world!
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>SIMdrom by visze</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">SIMdrom</h1>
+      <h2 class="project-tagline">Simulate Exomes or Genomes and spike in mutations</h2>
+      <a href="https://github.com/visze/simdrom" class="btn">View on GitHub</a>
+      <a href="https://github.com/visze/simdrom/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/visze/simdrom/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="simdrom" class="anchor" href="#simdrom" aria-hidden="true"><span class="octicon octicon-link"></span></a>SIMdrom</h1>
+
+<p>Simulate Exomes, Genomes, or self defined populations and spike in mutations. SIMdrom is a Java program to randomly select variants in a VCF file and create a new VCF file. A second VCF file can be used to spike in other randomly selected variants. Homozygous and heterozygous genotypes are selected by the Hardy-Weinberg principle. SIMdrom also exposes its functionality through a library API.</p>
+
+<h2>
+<a id="use-cases" class="anchor" href="#use-cases" aria-hidden="true"><span class="octicon octicon-link"></span></a>Use cases</h2>
+
+<p>There are two typical use-cases where you can use SIMdrom. </p>
+
+<ol>
+<li>Generate a random variant files to test you NGS pipeline.</li>
+<li>Generate a random variant files and spike in a pathogenic mutations. You can use the files for performance validation of your diagnostic, gene prioritisation, or variant prioritisation pipeline.<br>
+</li>
+</ol>
+
+<h2>
+<a id="quickstart" class="anchor" href="#quickstart" aria-hidden="true"><span class="octicon octicon-link"></span></a>Quickstart</h2>
+
+<h3>
+<a id="use-1000-genomes-to-generate-a-random-genome" class="anchor" href="#use-1000-genomes-to-generate-a-random-genome" aria-hidden="true"><span class="octicon octicon-link"></span></a>Use 1000 Genomes to generate a random genome</h3>
+
+<p>Download the *.sites.vcf.gz from 1000Genomes - ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/ - and the corresponding index file *.sites.vcf.gz.tbi. The VCF-file should contain a <code>AF</code> identifier in the info column.</p>
+
+<p>Run SIMdrom with the downloaded VCF file</p>
+
+<pre><code># java -jar jannovar-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF
+</code></pre>
+
+<p>The new sampled individual will be printed out into the standard output. You can pipe it into a VCF file.</p>
+
+<pre><code># java -jar jannovar-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF &gt; newIndividualVCFfile.vcf
+</code></pre>
+
+<p>or generate a bgziped file</p>
+
+<pre><code># java -jar jannovar-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF | bgzip -c | &gt; newIndividualVCFfile.vcf.gz
+</code></pre>
+
+<h3>
+<a id="use-exac-to-generate-a-random-exome" class="anchor" href="#use-exac-to-generate-a-random-exome" aria-hidden="true"><span class="octicon octicon-link"></span></a>Use ExAC to generate a random Exome</h3>
+
+<p>Download the current ExAC release from the Broadinstitute FTP - ftp://ftp.broadinstitute.org/pub/ExAC_release/ - and the corresponding index file. The VCF-file should contain a <code>AF</code> identifier in the info column.</p>
+
+<p>Run SIMdrom with the downloaded VCF file</p>
+
+<pre><code># java -jar jannovar-cli-0.0.1.jar -b ExAC.r0.3.sites.vep.vcf.gz -bAF AF
+</code></pre>
+
+<h3>
+<a id="use-1000-genomes-to-generate-a-random-genome-of-an-ethnical-population" class="anchor" href="#use-1000-genomes-to-generate-a-random-genome-of-an-ethnical-population" aria-hidden="true"><span class="octicon octicon-link"></span></a>Use 1000 Genomes to generate a random genome of an ethnical population</h3>
+
+<p>Download the 1000Genomes sites VCF file as described earlier. Ít contains allele frequencies from 5 different populations:</p>
+
+<table>
+<thead>
+<tr>
+<th>Identifier</th>
+<th>Population</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EAS_AF</td>
+<td>EAS</td>
+</tr>
+<tr>
+<td>EUR_AF</td>
+<td>EUR</td>
+</tr>
+<tr>
+<td>AFR_AF</td>
+<td>AFR</td>
+</tr>
+<tr>
+<td>AMR_AF</td>
+<td>AMR</td>
+</tr>
+<tr>
+<td>SAS_AF</td>
+<td>SAS</td>
+</tr>
+</tbody>
+</table>
+
+<p>For example if you want to sample an european individual use the following command:</p>
+
+<pre><code># java -jar jannovar-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF EUR_AF
+</code></pre>
+
+<h3>
+<a id="use-exac-to-generate-a-random-exome-of-an-ethnical-population" class="anchor" href="#use-exac-to-generate-a-random-exome-of-an-ethnical-population" aria-hidden="true"><span class="octicon octicon-link"></span></a>Use ExAC to generate a random Exome of an ethnical population</h3>
+
+<p>Download the ExAC VCF file as described earlier. Ít contains allele frequencies from 7 different populations. But instead of allele frequencies the counts of alternative and total alleles are provided. So we have to use two options in SIMdrom <code>-bAC</code> (alt allele counts) and <code>-bAN</code>(total allele counts)</p>
+
+<table>
+<thead>
+<tr>
+<th>Identifier ALT allele counts</th>
+<th>Identifier total allele counts</th>
+<th>Population</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AC_AFR</td>
+<td>AN_AFR</td>
+<td>African/African American</td>
+</tr>
+<tr>
+<td>AC_AMR</td>
+<td>AN_AFR</td>
+<td>American</td>
+</tr>
+<tr>
+<td>AC_EAS</td>
+<td>AN_AFR</td>
+<td>East Asian</td>
+</tr>
+<tr>
+<td>AC_FIN</td>
+<td>AN_AFR</td>
+<td>Finnish</td>
+</tr>
+<tr>
+<td>AC_NFE</td>
+<td>AN_AFR</td>
+<td>Non-Finnish European</td>
+</tr>
+<tr>
+<td>AC_OTH</td>
+<td>AN_AFR</td>
+<td>Other Allele</td>
+</tr>
+<tr>
+<td>AC_SAS</td>
+<td>AN_AFR</td>
+<td>South Asian Allele</td>
+</tr>
+</tbody>
+</table>
+
+<p>For example if you want to sample an american individual use the following command:</p>
+
+<pre><code># java -jar jannovar-cli-0.0.1.jar -b ExAC.r0.3.sites.vep.vcf.gz -bAC AC_AMR -bAN AN_AMR
+</code></pre>
+
+<h3>
+<a id="randomly-select-one-genome-of-1000genomes" class="anchor" href="#randomly-select-one-genome-of-1000genomes" aria-hidden="true"><span class="octicon octicon-link"></span></a>Randomly select one genome of 1000Genomes</h3>
+
+<p>You can also just select one genotype of an individual of a 1000genomes sample. Therefore you have to download the genotype VCF files from 1000Genomes - ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/ - and the corresponding index files. Right now, SIMdrom can only use one input VCF as background population. Therefore you have to merge the files that are divided by chromosome. Now you can use the <code>--single-sample</code> option to select only one genotype.</p>
+
+<pre><code># java -jar ALL.ALLChr.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -bAC AC_AMR -bAN AN_AMR
+</code></pre>
+
+<h3>
+<a id="spike-in-a-pathogenic-mutation-of-clinvar" class="anchor" href="#spike-in-a-pathogenic-mutation-of-clinvar" aria-hidden="true"><span class="octicon octicon-link"></span></a>Spike in a pathogenic mutation of ClinVar</h3>
+
+<p>Download the ClinVar VCF ind index file from the NCBI FTP - ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/. Not every included variant is known as pathogenic. To use only the known pathogenic variants we have to use the info column filter of SIMdrom on the mutations file: <code>--mutations-info-filter</code>. The pathogenicity is decoded in the <code>CLNSIG</code> identifier with the number <code>5</code>. The corresponding SIMdrom option is <code>--mutations-info-filter CLNSIG=5</code>.</p>
+
+<p>If we only want to spike in 1 mutation we have to use the <code>--mutations-variants-amount</code> with the value <code>1</code>. We can increase the value if we want more spiked in mutations. Every mutation has an equal probability to be chosen.</p>
+
+<p>To find out the spiked in mutation(s), we can deliver a spike in log-file with the option <code>--spike-in-log</code>. The spike in log format is TSV and includes every spiked in mutation (TSV for better readability). </p>
+
+<p>In this example we use ExAC as background population and spike in one ClinVar mutation:</p>
+
+<pre><code># java -jar jannovar-cli-0.0.1.jar -b ExAC.r0.3.sites.vep.vcf.gz -bAF AF -m clinvar.vcf.gz --mutations-info-filter CLINSIG=5 --mutations-variants-amount 1 --spike-in-log clinVarSpikeInLog.tsv
+</code></pre>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/visze/simdrom">SIMdrom</a> is maintained by <a href="https://github.com/visze">visze</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
+
