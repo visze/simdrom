@@ -1,5 +1,6 @@
 package de.charite.compbio.simdrom;
 
+import htsjdk.samtools.util.Interval;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.writer.Options;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
@@ -8,6 +9,8 @@ import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder;
 import java.io.IOException;
 
 import org.apache.commons.cli.ParseException;
+
+import com.google.common.collect.ImmutableList;
 
 import de.charite.compbio.simdrom.cli.SIMdromSetting;
 import de.charite.compbio.simdrom.io.writer.VCFTSVWriter;
@@ -41,6 +44,8 @@ public class Main {
 		if (SIMdromSetting.BACKGROUND_VARIANT_NUMBER > 0) {
 			backgroundSampler.setVariantsAmount(SIMdromSetting.BACKGROUND_VARIANT_NUMBER);
 		}
+		if (SIMdromSetting.INTERVALS != null)
+			backgroundSampler.setIntervals(SIMdromSetting.INTERVALS);
 
 		VCFSampler mutationSampler = null;
 		if (SIMdromSetting.MUTATIONS_VCF != null) {
@@ -57,6 +62,8 @@ public class Main {
 				mutationSampler.setACIdentifier(SIMdromSetting.MUTATIONS_ALT_ALLELE_COUNT);
 				mutationSampler.setANIdentifier(SIMdromSetting.MUTATIONS_ALLELE_COUNT);
 			}
+			if (SIMdromSetting.INTERVALS != null)
+				mutationSampler.setIntervals(SIMdromSetting.INTERVALS);
 		}
 
 		// writer
