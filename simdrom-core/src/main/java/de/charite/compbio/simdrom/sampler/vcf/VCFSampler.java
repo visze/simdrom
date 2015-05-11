@@ -3,8 +3,10 @@
  */
 package de.charite.compbio.simdrom.sampler.vcf;
 
+import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.util.CloseableIterator;
 import htsjdk.samtools.util.Interval;
+import htsjdk.samtools.util.IntervalList;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
@@ -28,7 +30,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import de.charite.compbio.simdrom.filter.IFilter;
@@ -53,7 +54,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 	private String filePath;
 	private ImmutableSet<IFilter> filters;
 	// intervals
-	private ImmutableList<Interval> intervals;
+	private IntervalList intervals;
 	private int intervalPosition = 0;
 
 	public VCFSampler(String filePath) {
@@ -84,7 +85,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 	private Interval nextInterval() {
 		Interval output = null;
 		if (intervalPosition < getIntervals().size()) {
-			output = getIntervals().get(intervalPosition);
+			output = getIntervals().getIntervals().get(intervalPosition);
 			intervalPosition++;
 		}
 		return output;
@@ -106,7 +107,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 	}
 
 	private boolean useIntervals() {
-		return !getIntervals().isEmpty();
+		return !getIntervals().getIntervals().isEmpty();
 	}
 
 	@Override
@@ -364,14 +365,14 @@ public class VCFSampler implements Iterator<VariantContext> {
 		this.anIdentifier = anIdentifier;
 	}
 
-	public ImmutableList<Interval> getIntervals() {
+	public IntervalList getIntervals() {
 		if (intervals == null)
-			intervals = ImmutableList.<Interval> builder().build();
+			intervals = new IntervalList(new SAMFileHeader());
 		return intervals;
 	}
 
-	public void setIntervals(ImmutableList<Interval> intervals) {
-		this.intervals = intervals;
+	public void setIntervals(IntervalList intervals) {
+		this.intervals = intervals.uniqued().sorted();
 	}
 
 }

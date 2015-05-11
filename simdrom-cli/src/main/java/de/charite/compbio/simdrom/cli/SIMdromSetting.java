@@ -1,6 +1,5 @@
 package de.charite.compbio.simdrom.cli;
 
-import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.util.Interval;
 import htsjdk.samtools.util.IntervalList;
 
@@ -31,6 +30,7 @@ import de.charite.compbio.simdrom.cli.exception.NotAllowedCombinationOfOptionsEx
 import de.charite.compbio.simdrom.cli.exception.WrongIntervalFormatException;
 import de.charite.compbio.simdrom.filter.IFilter;
 import de.charite.compbio.simdrom.filter.InfoFieldFilter;
+import de.charite.compbio.simdrom.interval.SAMFileHeaderBuilder;
 
 public class SIMdromSetting {
 
@@ -297,7 +297,7 @@ public class SIMdromSetting {
 				for (String intervalString : cmd.getOptionValues("interval")) {
 					lst.addAll(getIntervalOfOption(intervalString));
 				}
-				INTERVALS = new IntervalList(new SAMFileHeader());
+				INTERVALS = new IntervalList(SAMFileHeaderBuilder.build());
 				INTERVALS.addall(lst);
 			}
 			// filters

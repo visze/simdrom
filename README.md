@@ -5,6 +5,8 @@
 
 Simulate Exomes, Genomes, or self defined populations and spike in mutations. SIMdrom is a Java program to randomly select variants in a VCF file and create a new VCF file. A second VCF file can be used to spike in other randomly selected variants. Homozygous and heterozygous genotypes are selected by the Hardy-Weinberg principle. SIMdrom also exposes its functionality through a library API.
 
+SIMdrom is compatible with Java 7 and higher.
+
 ## Use cases
 
 There are two typical use-cases where you can use SIMdrom. 
@@ -67,12 +69,12 @@ Download the ExAC VCF file as described earlier. Ít contains allele frequencies
 |Identifier ALT allele counts | Identifier total allele counts | Population           |
 |-----------------------------|--------------------------------|----------------------|
 |AC_AFR                       |AN_AFR                       |African/African American |
-|AC_AMR                       |AN_AFR                       |American                 |
-|AC_EAS                       |AN_AFR                       |East Asian               |
-|AC_FIN                       |AN_AFR                       |Finnish                  |
-|AC_NFE                       |AN_AFR                       |Non-Finnish European     |
-|AC_OTH                       |AN_AFR                       |Other Allele             |
-|AC_SAS                       |AN_AFR                       |South Asian Allele       |
+|AC_AMR                       |AN_AMR                       |American                 |
+|AC_EAS                       |AN_EAS                       |East Asian               |
+|AC_FIN                       |AN_FIN                       |Finnish                  |
+|AC_NFE                       |AN_NFE                       |Non-Finnish European     |
+|AC_OTH                       |AN_OTH                       |Other Allele             |
+|AC_SAS                       |AN_SAS                       |South Asian Allele       |
 
 For example if you want to sample an american individual use the following command:
 ```

@@ -45,7 +45,7 @@ public class Main {
 			backgroundSampler.setVariantsAmount(SIMdromSetting.BACKGROUND_VARIANT_NUMBER);
 		}
 		if (SIMdromSetting.INTERVALS != null)
-			backgroundSampler.setIntervals(ImmutableList.<Interval>builder().addAll(SIMdromSetting.INTERVALS.uniqued().getIntervals()).build());
+			backgroundSampler.setIntervals(SIMdromSetting.INTERVALS);
 
 		VCFSampler mutationSampler = null;
 		if (SIMdromSetting.MUTATIONS_VCF != null) {
@@ -63,7 +63,7 @@ public class Main {
 				mutationSampler.setANIdentifier(SIMdromSetting.MUTATIONS_ALLELE_COUNT);
 			}
 			if (SIMdromSetting.INTERVALS != null)
-				mutationSampler.setIntervals(ImmutableList.<Interval>builder().addAll(SIMdromSetting.INTERVALS.uniqued().getIntervals()).build());
+				mutationSampler.setIntervals(SIMdromSetting.INTERVALS);
 		}
 
 		// writer
