@@ -1,4 +1,4 @@
-package de.charite.compbio.simdrom.cli;
+package de.charite.compbio.simdrom.cli.exception;
 
 import java.util.List;
 

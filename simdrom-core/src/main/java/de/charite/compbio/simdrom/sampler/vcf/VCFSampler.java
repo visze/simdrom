@@ -4,6 +4,7 @@
 package de.charite.compbio.simdrom.sampler.vcf;
 
 import htsjdk.samtools.util.CloseableIterator;
+import htsjdk.samtools.util.Interval;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import de.charite.compbio.simdrom.filter.IFilter;
@@ -50,6 +52,9 @@ public class VCFSampler implements Iterator<VariantContext> {
 	private Random random;
 	private String filePath;
 	private ImmutableSet<IFilter> filters;
+	// intervals
+	private ImmutableList<Interval> intervals;
+	private int intervalPosition = 0;
 
 	public VCFSampler(String filePath) {
 		this.filePath = filePath;
@@ -57,9 +62,32 @@ public class VCFSampler implements Iterator<VariantContext> {
 	}
 
 	public CloseableIterator<VariantContext> getIterator() {
-		if (this.iterator == null)
-			this.iterator = this.parser.iterator();
+
+		if (this.iterator == null) {
+			if (useIntervals())
+				this.iterator = getNextIntervalInterator();
+			else
+				this.iterator = this.parser.iterator();
+		}
 		return iterator;
+	}
+
+	private CloseableIterator<VariantContext> getNextIntervalInterator() {
+		Interval interval = nextInterval();
+		if (interval != null)
+			return this.parser.query(interval.getContig(), interval.getStart(), interval.getEnd());
+		else
+			return null;
+
+	}
+
+	private Interval nextInterval() {
+		Interval output = null;
+		if (intervalPosition < getIntervals().size()) {
+			output = getIntervals().get(intervalPosition);
+			intervalPosition++;
+		}
+		return output;
 	}
 
 	public void setFilters(ImmutableSet<IFilter> filters) {
@@ -68,8 +96,17 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	@Override
 	public boolean hasNext() {
-		// FIXME has next can be true, but next can gi9ve back null!
+		// FIXME has next can be true, but next can give back null!
+		if (useIntervals())
+			while (getIterator() != null && !getIterator().hasNext())
+				this.iterator = getNextIntervalInterator();
+		if (getIterator() == null)
+			return false;
 		return getIterator().hasNext();
+	}
+
+	private boolean useIntervals() {
+		return !getIntervals().isEmpty();
 	}
 
 	@Override
@@ -84,7 +121,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	private VariantContext getNextVariant() {
 		VariantContext output = null;
-		while (getIterator().hasNext() && output == null) {
+		while (hasNext() && output == null) {
 			// get next line
 			VariantContext candidate = getIterator().next();
 
@@ -325,6 +362,16 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	public void setANIdentifier(String anIdentifier) {
 		this.anIdentifier = anIdentifier;
+	}
+
+	public ImmutableList<Interval> getIntervals() {
+		if (intervals == null)
+			intervals = ImmutableList.<Interval> builder().build();
+		return intervals;
+	}
+
+	public void setIntervals(ImmutableList<Interval> intervals) {
+		this.intervals = intervals;
 	}
 
 }

@@ -1,9 +1,18 @@
 package de.charite.compbio.simdrom.cli;
 
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.util.Interval;
+import htsjdk.samtools.util.IntervalList;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
@@ -17,6 +26,9 @@ import org.apache.commons.cli.ParseException;
 
 import com.google.common.collect.ImmutableSet;
 
+import de.charite.compbio.simdrom.cli.exception.MissingOptionsException;
+import de.charite.compbio.simdrom.cli.exception.NotAllowedCombinationOfOptionsException;
+import de.charite.compbio.simdrom.cli.exception.WrongIntervalFormatException;
 import de.charite.compbio.simdrom.filter.IFilter;
 import de.charite.compbio.simdrom.filter.InfoFieldFilter;
 
@@ -90,6 +102,10 @@ public class SIMdromSetting {
 	 * Spike in log file to get informations about the spike in.
 	 */
 	public static String SPLIKE_IN_LOGFILE;
+	/**
+	 * intervals
+	 */
+	public static IntervalList INTERVALS;
 
 	public static ImmutableSet<IFilter> MUTATIONS_FILTERS = ImmutableSet.<IFilter> builder().build();
 
@@ -201,6 +217,13 @@ public class SIMdromSetting {
 				.withDescription("Optional. Path for a log file (TSV-Format) that descibes the spiked in mutations.");
 		options.addOption(OptionBuilder.create());
 
+		// spike in log
+		OptionBuilder.hasArgs();
+		OptionBuilder.withLongOpt("interval");
+		OptionBuilder
+				.withDescription("Optional. Use the parameter with intervals (chr1:12113-12123) or insert an interval list (file constist of one interval in each line)");
+		options.addOption(OptionBuilder.create("i"));
+
 		// mutations info filter
 		OptionBuilder.hasArgs();
 		OptionBuilder.withLongOpt("mutations-info-filter");
@@ -265,10 +288,19 @@ public class SIMdromSetting {
 			// single sample
 			if (cmd.hasOption("single-sample"))
 				ONLY_ONE_SAMPLE = true;
-
+			// spike in log
 			if (cmd.hasOption("spike-in-log"))
 				SPLIKE_IN_LOGFILE = cmd.getOptionValue("spike-in-log");
-
+			// intervals
+			if (cmd.hasOption("interval")) {
+				List<Interval> lst = new ArrayList<Interval>();
+				for (String intervalString : cmd.getOptionValues("interval")) {
+					lst.addAll(getIntervalOfOption(intervalString));
+				}
+				INTERVALS = new IntervalList(new SAMFileHeader());
+				INTERVALS.addall(lst);
+			}
+			// filters
 			Set<IFilter> filters = new HashSet<IFilter>();
 			if (cmd.hasOption("mutations-info-filter")) {
 				for (String opt : cmd.getOptionValues("mutations-info-filter")) {
@@ -289,10 +321,45 @@ public class SIMdromSetting {
 			formatter.setWidth(120);
 			formatter.printHelp("SIMdrom", options);
 			System.exit(0);
-		} catch (NotAllowedCombinationOfOptionsException | MissingOptionsException e) {
+		} catch (NotAllowedCombinationOfOptionsException | MissingOptionsException | IOException
+				| WrongIntervalFormatException e) {
 			e.printStackTrace();
 			System.exit(0);
 		}
+	}
+
+	private static List<Interval> getIntervalOfOption(String intervalString) throws IOException,
+			WrongIntervalFormatException {
+		try {
+			List<Interval> output = new ArrayList<Interval>();
+			output.add(getInterval(intervalString));
+			return output;
+		} catch (WrongIntervalFormatException e) {
+			return getIntervalsOfFile(intervalString);
+		}
+
+	}
+
+	private static Interval getInterval(String intervalString) throws WrongIntervalFormatException {
+		Pattern intervalPattern = Pattern.compile("^((chr)?(\\d+|[XYM])):(\\d+)-(\\d+)$");
+		Matcher m = intervalPattern.matcher(intervalString);
+		if (m.matches()) {
+			return new Interval(m.group(1), Integer.parseInt(m.group(4)), Integer.parseInt(m.group(5)));
+		}
+		throw new WrongIntervalFormatException(intervalString);
+	}
+
+	private static List<Interval> getIntervalsOfFile(String filepath) throws IOException, WrongIntervalFormatException {
+		List<Interval> output = new ArrayList<Interval>();
+		BufferedReader br = new BufferedReader(new FileReader(new File(filepath)));
+		String line;
+		while ((line = br.readLine()) != null) {
+			if (line.trim().isEmpty())
+				continue;
+			output.add(getInterval(line.trim()));
+		}
+
+		return output;
 	}
 
 	private static void checkNotAllowedOptions(CommandLine cmd, String... values)
