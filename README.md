@@ -23,15 +23,15 @@ Download the *.sites.vcf.gz from 1000Genomes - ftp://ftp.1000genomes.ebi.ac.uk/v
 
 Run SIMdrom with the downloaded VCF file
 ```
-# java -jar jannovar-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF
+# java -jar simdrom-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF
 ```
 The new sampled individual will be printed out into the standard output. You can pipe it into a VCF file.
  ```
-# java -jar jannovar-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF > newIndividualVCFfile.vcf
+# java -jar simdrom-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF > newIndividualVCFfile.vcf
 ```
 or generate a bgziped file
 ```
-# java -jar jannovar-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF | bgzip -c | > newIndividualVCFfile.vcf.gz
+# java -jar simdrom-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF | bgzip -c | > newIndividualVCFfile.vcf.gz
 ```
 
 ### Use ExAC to generate a random Exome
@@ -40,7 +40,7 @@ Download the current ExAC release from the Broadinstitute FTP - ftp://ftp.broadi
 
 Run SIMdrom with the downloaded VCF file
 ```
-# java -jar jannovar-cli-0.0.1.jar -b ExAC.r0.3.sites.vep.vcf.gz -bAF AF
+# java -jar simdrom-cli-0.0.1.jar -b ExAC.r0.3.sites.vep.vcf.gz -bAF AF
 ```
 
 ### Use 1000 Genomes to generate a random genome of an ethnical population
@@ -57,7 +57,7 @@ Download the 1000Genomes sites VCF file as described earlier. Ít contains allel
 
 For example if you want to sample an european individual use the following command:
 ```
-# java -jar jannovar-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF EUR_AF
+# java -jar simdrom-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF EUR_AF
 ```
 
 ### Use ExAC to generate a random Exome of an ethnical population
@@ -78,7 +78,7 @@ Download the ExAC VCF file as described earlier. Ít contains allele frequencies
 
 For example if you want to sample an american individual use the following command:
 ```
-# java -jar jannovar-cli-0.0.1.jar -b ExAC.r0.3.sites.vep.vcf.gz -bAC AC_AMR -bAN AN_AMR
+# java -jar simdrom-cli-0.0.1.jar -b ExAC.r0.3.sites.vep.vcf.gz -bAC AC_AMR -bAN AN_AMR
 ```
 
 ### Randomly select one genome of 1000Genomes
@@ -100,5 +100,5 @@ To find out the spiked in mutation(s), we can deliver a spike in log-file with t
 
 In this example we use ExAC as background population and spike in one ClinVar mutation:
 ```
-# java -jar jannovar-cli-0.0.1.jar -b ExAC.r0.3.sites.vep.vcf.gz -bAF AF -m clinvar.vcf.gz --mutations-info-filter CLINSIG=5 --mutations-variants-amount 1 --spike-in-log clinVarSpikeInLog.tsv
+# java -jar simdrom-cli-0.0.1.jar -b ExAC.r0.3.sites.vep.vcf.gz -bAF AF -m clinvar.vcf.gz --mutations-info-filter CLINSIG=5 --mutations-variants-amount 1 --spike-in-log clinVarSpikeInLog.tsv
 ```
