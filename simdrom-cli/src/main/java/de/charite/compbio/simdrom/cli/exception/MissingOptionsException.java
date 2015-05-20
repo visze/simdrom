@@ -9,7 +9,7 @@ import de.charite.compbio.simdrom.cli.SIMdromSetting;
 /**
  * Exception if a required option in {@link SIMdromSetting} is missing.
  * 
- * @author Max Schubach {@literal <max.schubach@charite.de>}
+ * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
 public class MissingOptionsException extends Exception {

@@ -9,11 +9,26 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * In implementation to use the VCF-Info column with a key {@link #info} and a
+ * value {@link #type} to filter out variants that do not match to key=value.
+ * 
+ * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
+ *
+ */
 public class InfoFieldFilter implements IFilter {
 
+	/**
+	 * Filter type
+	 */
 	private final FilterType filterType = FilterType.INFO_FIELD_FILTER;
-
+	/**
+	 * key in INFO column
+	 */
 	private String info;
+	/**
+	 * Value of the {@link #info} in INFO column
+	 */
 	private Object type;
 
 	public InfoFieldFilter(String info, Object type) {
@@ -21,6 +36,12 @@ public class InfoFieldFilter implements IFilter {
 		this.type = type;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see de.charite.compbio.simdrom.filter.IFilter#filter(htsjdk.variant.
+	 * variantcontext.VariantContext)
+	 */
 	@Override
 	public VariantContext filter(VariantContext vc) {
 		CommonInfo infoField = vc.getCommonInfo();

@@ -11,7 +11,7 @@ import de.charite.compbio.simdrom.cli.SIMdromSetting;
  * Exception if a not allowed combination of {@link Option} is used in
  * {@link SIMdromSetting}.
  * 
- * @author Max Schubach {@literal <max.schubach@charite.de>}
+ * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
 public class NotAllowedCombinationOfOptionsException extends Exception {

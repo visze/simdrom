@@ -18,7 +18,8 @@ import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
 /**
  * Main class for the command line interface.
  * 
- * @author Max Schubach {@literal <max.schubach@charite.de>}
+ * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
+ *
  */
 public class Main {
 

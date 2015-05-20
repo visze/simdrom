@@ -3,7 +3,7 @@ package de.charite.compbio.simdrom.cli.exception;
 /**
  * Exception if an interval (chr1:1212-12121) is formatted wrong.
  * 
- * @author Max Schubach {@literal <max.schubach@charite.de>}
+ * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
 public class WrongIntervalFormatException extends Exception {
