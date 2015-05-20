@@ -35,7 +35,7 @@ import de.charite.compbio.simdrom.interval.SAMFileHeaderBuilder;
 /**
  * Command line options class for the SIMdrom.
  * 
- * @author Max Schubach <max.schubach@charite.de>
+ * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
 public class SIMdromSetting {
@@ -119,7 +119,9 @@ public class SIMdromSetting {
 	 * parse the option arguments of the command line and set the static fields.
 	 * 
 	 * @param args
+	 *            Arguments of options
 	 * @throws ParseException
+	 *             if arguments coud not parse
 	 */
 	public static void parse(String[] args) throws ParseException {
 		Options options = new Options();

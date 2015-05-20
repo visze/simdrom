@@ -35,7 +35,8 @@ import com.google.common.collect.ImmutableSet;
 import de.charite.compbio.simdrom.filter.IFilter;
 
 /**
- * @author Max Schubach <max.schubach@charite.de>
+ * 
+ * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
 public class VCFSampler implements Iterator<VariantContext> {

@@ -11,7 +11,7 @@ import de.charite.compbio.simdrom.cli.SIMdromSetting;
  * Exception if a not allowed combination of {@link Option} is used in
  * {@link SIMdromSetting}.
  * 
- * @author Max Schubach <max.schubach@charite.de>
+ * @author Max Schubach {@literal <max.schubach@charite.de>}
  *
  */
 public class NotAllowedCombinationOfOptionsException extends Exception {
@@ -24,8 +24,8 @@ public class NotAllowedCombinationOfOptionsException extends Exception {
 	/**
 	 * Constructor builds a message with the given list.
 	 * 
-	 * @param List
-	 *            of options that are not allowed to combine
+	 * @param values
+	 *            List of options that are not allowed to combine
 	 */
 	public NotAllowedCombinationOfOptionsException(List<String> values) {
 		super(buildMessage(values));

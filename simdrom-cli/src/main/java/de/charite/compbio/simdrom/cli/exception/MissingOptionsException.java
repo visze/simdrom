@@ -9,7 +9,7 @@ import de.charite.compbio.simdrom.cli.SIMdromSetting;
 /**
  * Exception if a required option in {@link SIMdromSetting} is missing.
  * 
- * @author Max Schubach <max.schubach@charite.de>
+ * @author Max Schubach {@literal <max.schubach@charite.de>}
  *
  */
 public class MissingOptionsException extends Exception {
@@ -22,10 +22,10 @@ public class MissingOptionsException extends Exception {
 	/**
 	 * Constructor Will build a message wit the two lists to notify the user.
 	 * 
-	 * @param List
-	 *            of necessary all options used.
-	 * @param List
-	 *            of missing options.
+	 * @param usedOptions
+	 *            List of necessary all options used.
+	 * @param missingOptions
+	 *            List of missing options.
 	 */
 	public MissingOptionsException(List<String> usedOptions, List<String> missingOptions) {
 		super(buildMessage(usedOptions, missingOptions));

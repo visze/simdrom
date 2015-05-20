@@ -3,7 +3,7 @@ package de.charite.compbio.simdrom.filter;
 import htsjdk.variant.variantcontext.VariantContext;
 
 /**
- * @author Max Schubach <max.schubach@charite.de>
+ * @author Max Schubach {@literal <max.schubach@charite.de>}
  */
 public interface IFilter {
 	

@@ -14,13 +14,13 @@ import com.google.common.collect.ImmutableSet;
 import de.charite.compbio.simdrom.filter.IFilter;
 
 /**
- * @author Max Schubach <max.schubach@charite.de>
+ * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
 public class VCFAlternativeAlleleCounter {
 
 	private VCFFileReader parser;
-	 ImmutableSet<IFilter> filters;
+	ImmutableSet<IFilter> filters;
 	private int counts = -1;
 
 	public VCFAlternativeAlleleCounter(String filePath, ImmutableSet<IFilter> filters) {
