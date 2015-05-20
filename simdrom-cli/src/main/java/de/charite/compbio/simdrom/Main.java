@@ -1,6 +1,5 @@
 package de.charite.compbio.simdrom;
 
-import htsjdk.samtools.util.Interval;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.writer.Options;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
@@ -10,8 +9,6 @@ import java.io.IOException;
 
 import org.apache.commons.cli.ParseException;
 
-import com.google.common.collect.ImmutableList;
-
 import de.charite.compbio.simdrom.cli.SIMdromSetting;
 import de.charite.compbio.simdrom.io.writer.VCFTSVWriter;
 import de.charite.compbio.simdrom.sampler.SpikeIn;
@@ -19,14 +16,18 @@ import de.charite.compbio.simdrom.sampler.vcf.VCFRandomSampleSelecter;
 import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
 
 /**
+ * Main class for the command line interface.
+ * 
  * @author Max Schubach <max.schubach@charite.de>
  */
 public class Main {
 
 	public static void main(String[] args) throws ParseException, IOException {
 
+		// 1) Parse options
 		SIMdromSetting.parse(args);
 
+		// 2) Set VCF for background population and settings
 		VCFSampler backgroundSampler = new VCFSampler(SIMdromSetting.BACKGROUND_VCF);
 
 		backgroundSampler.setProbability(SIMdromSetting.BACKGROUND_PROBABILITY);
@@ -47,6 +48,7 @@ public class Main {
 		if (SIMdromSetting.INTERVALS != null)
 			backgroundSampler.setIntervals(SIMdromSetting.INTERVALS);
 
+		// 3) Set VCF for mutation (if set) and settings
 		VCFSampler mutationSampler = null;
 		if (SIMdromSetting.MUTATIONS_VCF != null) {
 			mutationSampler = new VCFSampler(SIMdromSetting.MUTATIONS_VCF);
@@ -66,19 +68,18 @@ public class Main {
 				mutationSampler.setIntervals(SIMdromSetting.INTERVALS);
 		}
 
-		// writer
+		// 4) Build writer
 		VariantContextWriter writer = new VariantContextWriterBuilder().setOutputVCFStream(System.out)
 				.unsetOption(Options.INDEX_ON_THE_FLY).build();
 
-		// log
+		// 5) Generate spikein class
 		boolean log = SIMdromSetting.SPLIKE_IN_LOGFILE != null;
-
 		SpikeIn spikein = new SpikeIn(backgroundSampler, mutationSampler, log);
 
-		// header
+		// 6) write out VCF header
 		writer.writeHeader(spikein.getVCFHeader());
 
-		// spike in and write out
+		// 7) spike in and write out
 		while (spikein.hasNext()) {
 			VariantContext vc = spikein.next();
 			if (vc == null)
@@ -86,7 +87,7 @@ public class Main {
 			writer.add(vc);
 		}
 
-		// write log
+		// 8) write log if set
 		if (log) {
 			VCFTSVWriter logWriter = new VCFTSVWriter(SIMdromSetting.SPLIKE_IN_LOGFILE);
 			boolean header = false;
@@ -100,10 +101,9 @@ public class Main {
 			logWriter.close();
 		}
 
-		// close properly
+		// 9) close properly and exit properly
 		writer.close();
 		spikein.close();
-		// and exit properly
 		System.exit(0);
 	}
 }

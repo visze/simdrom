@@ -32,6 +32,12 @@ import de.charite.compbio.simdrom.filter.IFilter;
 import de.charite.compbio.simdrom.filter.InfoFieldFilter;
 import de.charite.compbio.simdrom.interval.SAMFileHeaderBuilder;
 
+/**
+ * Command line options class for the SIMdrom.
+ * 
+ * @author Max Schubach <max.schubach@charite.de>
+ *
+ */
 public class SIMdromSetting {
 
 	/**
@@ -351,14 +357,15 @@ public class SIMdromSetting {
 
 	private static List<Interval> getIntervalsOfFile(String filepath) throws IOException, WrongIntervalFormatException {
 		List<Interval> output = new ArrayList<Interval>();
-		BufferedReader br = new BufferedReader(new FileReader(new File(filepath)));
+		File file = new File(filepath);
+		BufferedReader br = new BufferedReader(new FileReader(file));
 		String line;
 		while ((line = br.readLine()) != null) {
 			if (line.trim().isEmpty())
 				continue;
 			output.add(getInterval(line.trim()));
 		}
-
+		br.close();
 		return output;
 	}
 
