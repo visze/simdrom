@@ -48,7 +48,7 @@ public class InfoFieldFilter implements IFilter {
 		if (infoField.hasAttribute(info)) {
 			Object val = infoField.getAttribute(info);
 			if (val.getClass().isArray())
-				return getVariantContextFromArray(vc, infoField.getAttribute(info));
+				return getVariantContextFromArray(vc, val);
 			else if (val instanceof List)
 				return getVariantContextFromArray(vc, ((List) val).toArray());
 			else if (equalInfoType(val, type))
@@ -60,6 +60,9 @@ public class InfoFieldFilter implements IFilter {
 	private VariantContext getVariantContextFromArray(VariantContext vc, Object infoField) {
 
 		final int length = Array.getLength(infoField);
+
+		// check if we have the same number of attributes than the same number
+		// of ALT alleles.
 		if (length == vc.getAlternateAlleles().size()) {
 			List<Allele> alleles = new ArrayList<Allele>();
 			alleles.add(vc.getReference());
@@ -67,11 +70,12 @@ public class InfoFieldFilter implements IFilter {
 				if (equalInfoType(type, Array.get(infoField, i)))
 					alleles.add(vc.getAlternateAllele(i));
 			}
+			// no allele matches, return null
 			if (alleles.size() <= 1)
 				return null;
 			else
 				return new VariantContextBuilder(vc).alleles(alleles).make();
-		} else {
+		} else { // hack, no we add if one allele matches it.
 			for (int i = 0; i < length; i++) {
 				if (equalInfoType(type, Array.get(infoField, i)))
 					return vc;
