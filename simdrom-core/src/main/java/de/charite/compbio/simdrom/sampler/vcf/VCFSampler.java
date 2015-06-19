@@ -33,6 +33,7 @@ import java.util.Set;
 import com.google.common.collect.ImmutableSet;
 
 import de.charite.compbio.simdrom.filter.IFilter;
+import de.charite.compbio.simdrom.sampler.DeNovoSampler;
 
 /**
  * 
@@ -53,6 +54,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 	private CloseableIterator<VariantContext> iterator;
 	private Random random;
 	private String filePath;
+	private DeNovoSampler deNovoGenerator;
 	private ImmutableSet<IFilter> filters;
 	// intervals
 	private IntervalList intervals;
@@ -374,6 +376,10 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	public void setIntervals(IntervalList intervals) {
 		this.intervals = intervals.uniqued().sorted();
+	}
+	
+	public void setDeNovoGenerator(DeNovoSampler deNovoGenerator) {
+		this.deNovoGenerator = deNovoGenerator;
 	}
 
 }

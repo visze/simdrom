@@ -11,6 +11,7 @@ import org.apache.commons.cli.ParseException;
 
 import de.charite.compbio.simdrom.cli.SIMdromSetting;
 import de.charite.compbio.simdrom.io.writer.VCFTSVWriter;
+import de.charite.compbio.simdrom.sampler.DeNovoSampler;
 import de.charite.compbio.simdrom.sampler.SpikeIn;
 import de.charite.compbio.simdrom.sampler.vcf.VCFRandomSampleSelecter;
 import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
@@ -48,6 +49,8 @@ public class Main {
 		}
 		if (SIMdromSetting.INTERVALS != null)
 			backgroundSampler.setIntervals(SIMdromSetting.INTERVALS);
+		if (SIMdromSetting.USE_DE_NOVO)
+			backgroundSampler.setDeNovoGenerator(new DeNovoSampler(SIMdromSetting.DE_NOVO_RATE,SIMdromSetting.REFERENCE));
 
 		// 3) Set VCF for mutation (if set) and settings
 		VCFSampler mutationSampler = null;

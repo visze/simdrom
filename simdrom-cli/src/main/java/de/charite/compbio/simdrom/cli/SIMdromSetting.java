@@ -105,15 +105,30 @@ public class SIMdromSetting {
 	 */
 	public static String MUTATIONS_ALLELE_COUNT;
 	/**
+	 * If set, generate deNovo mutations.
+	 */
+	public static boolean USE_DE_NOVO = false;
+	/**
+	 * DeNovo rate or new mutations.
+	 */
+	public static double DE_NOVO_RATE = 1.2 * Math.pow(10, -8);
+	/**
+	 * Reference file
+	 */
+	public static String REFERENCE;
+	/**
 	 * Spike in log file to get informations about the spike in.
 	 */
 	public static String SPLIKE_IN_LOGFILE;
 	/**
-	 * intervals
+	 * Intervals. only write out at these points.
 	 */
 	public static IntervalList INTERVALS;
 
-	public static ImmutableSet<IFilter> MUTATIONS_FILTERS = ImmutableSet.<IFilter> builder().build();
+	/**
+	 * Mutation filter
+	 */
+	public static ImmutableSet<IFilter> MUTATIONS_FILTERS;
 
 	/**
 	 * parse the option arguments of the command line and set the static fields.
@@ -218,6 +233,19 @@ public class SIMdromSetting {
 				.withDescription("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single probabilities per variant. (mAC/mAN)");
 		options.addOption(OptionBuilder.create("mAN"));
 
+		// deNovo rate
+		OptionBuilder.hasOptionalArg();
+		OptionBuilder.withLongOpt("de-novo");
+		OptionBuilder
+				.withDescription("Optional. If set, de-novo mutations are spiked in. Standard rate is 1.2*10^-8. But you can provide your own rate with this option. An indexed reference have to be set (see option --reference).");
+		options.addOption(OptionBuilder.create());
+		// Reference file
+		OptionBuilder.hasArg();
+		OptionBuilder.withLongOpt("reference");
+		OptionBuilder
+				.withDescription("Needed for option --de-novo. Please enter the paths to an indexed multi-FASTA file of your reference genome.");
+		options.addOption(OptionBuilder.create());
+
 		// spike in log
 		OptionBuilder.hasArg();
 		OptionBuilder.withLongOpt("spike-in-log");
@@ -253,6 +281,7 @@ public class SIMdromSetting {
 					"mutations-allele-frequency-identifier", "mutations-allele-count");
 			checkMissingOption(cmd, "background-allele-count", "background-alt-allele-count");
 			checkMissingOption(cmd, "mutations-allele-count", "mutations-alt-allele-count");
+			checkMissingOption(cmd, "de-novo", "reference");
 
 			BACKGROUND_VCF = cmd.getOptionValue("background-population");
 			if (cmd.hasOption("mutations"))
@@ -296,6 +325,13 @@ public class SIMdromSetting {
 			// single sample
 			if (cmd.hasOption("single-sample"))
 				ONLY_ONE_SAMPLE = true;
+			// de novo
+			if (cmd.hasOption("de-novo")) {
+				USE_DE_NOVO = true;
+				if (cmd.getOptionValue("de-novo") != null) {
+					DE_NOVO_RATE = Double.parseDouble(cmd.getOptionValue("de-novo"));
+				}
+			}
 			// spike in log
 			if (cmd.hasOption("spike-in-log"))
 				SPLIKE_IN_LOGFILE = cmd.getOptionValue("spike-in-log");
