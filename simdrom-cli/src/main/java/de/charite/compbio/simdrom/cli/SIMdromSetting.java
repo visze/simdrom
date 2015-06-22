@@ -331,6 +331,7 @@ public class SIMdromSetting {
 				if (cmd.getOptionValue("de-novo") != null) {
 					DE_NOVO_RATE = Double.parseDouble(cmd.getOptionValue("de-novo"));
 				}
+				REFERENCE = cmd.getOptionValue("reference");
 			}
 			// spike in log
 			if (cmd.hasOption("spike-in-log"))

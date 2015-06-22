@@ -36,7 +36,7 @@ public class MissingOptionsException extends Exception {
 		StringBuilder message = new StringBuilder("You cannot use the option(s) ");
 		message.append(StringUtils.join(usedOptions, ", "));
 		message.append(" without using option(s) ");
-		message.append(StringUtils.join(usedOptions, ", "));
+		message.append(StringUtils.join(missingOptions, ", "));
 		return message.toString();
 	}
 
