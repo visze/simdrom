@@ -114,5 +114,9 @@ public class DeNovoSampler implements Iterator<VariantContext> {
 			deNovoPositions = new LinkedList<VariantContext>();
 		return deNovoPositions;
 	}
+	@Override
+	public void remove() {
+		throw new UnsupportedOperationException();
+	}
 
 }
