@@ -50,7 +50,7 @@ public class InfoFieldFilter implements IFilter {
 			if (val.getClass().isArray())
 				return getVariantContextFromArray(vc, val);
 			else if (val instanceof List)
-				return getVariantContextFromArray(vc, ((List) val).toArray());
+				return getVariantContextFromArray(vc, ((List<?>) val).toArray());
 			else if (equalInfoType(val, type))
 				return vc;
 		}
