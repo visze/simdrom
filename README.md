@@ -5,7 +5,7 @@
 
 Simulate Exomes, Genomes, or self defined populations and spike in mutations. SIMdrom is a Java program to randomly select variants in a VCF file and create a new VCF file. A second VCF file can be used to spike in other randomly selected variants. Homozygous and heterozygous genotypes are selected by the Hardy-Weinberg principle. SIMdrom also exposes its functionality through a library API.
 
-SIMdrom is compatible with Java 7 and higher.
+SIMdrom is compatible with Java 8 and higher.
 
 ## Use cases
 
