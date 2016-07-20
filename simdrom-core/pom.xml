@@ -4,7 +4,7 @@
   <parent>
     <groupId>de.charite.compbio</groupId>
     <artifactId>simdrom</artifactId>
-    <version>0.0.4-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
   </parent>
   <artifactId>simdrom-core</artifactId>
   <name>simdrom-core</name>
