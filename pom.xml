@@ -4,7 +4,7 @@
 	<groupId>de.charite.compbio</groupId>
 	<artifactId>simdrom</artifactId>
 	<packaging>pom</packaging>
-	<version>0.0.3-SNAPSHOT</version>
+	<version>0.0.2</version>
 	<name>simdrom</name>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -26,17 +26,6 @@
 		<module>simdrom-cli</module>
 		<module>simdrom-core</module>
 	</modules>
-
-	<distributionManagement>
-  <repository>
-    <id>github-simdrom</id>
-    <url>https://github.com/visze/simdrom.git</url>
-  </repository>
-  <snapshotRepository>
-    <id>github-simdrom</id>
-    <url>https://github.com/visze/simdrom.git</url>
-  </snapshotRepository>
-</distributionManagement>
 
 	<build>
 		<plugins>
@@ -84,7 +73,7 @@
             <artifactId>jgitflow-maven-plugin</artifactId>
             <version>1.0-m5.1</version>
             <configuration>
-							<defaultOriginUrl>https://github.com/visze/simdrom.git</defaultOriginUrl>
+							<!-- <defaultOriginUrl>https://github.com/visze/simdrom.git</defaultOriginUrl> -->
 							<!-- Keep your maven submodules at the same version as the parent POM -->
 							<autoVersionSubmodules>true</autoVersionSubmodules>
 				      <flowInitContext>
@@ -96,9 +85,9 @@
         </plugin>
 		</plugins>
 	</build>
-	<scm>
+	<!-- <scm>
 		<connection>scm:git:https://github.com/visze/simdrom.git</connection>
 		<url>scm:git:https://github.com/visze/simdrom.git</url>
 		<developerConnection>scm:git:https://github.com/visze/simdrom.git</developerConnection>
-  </scm>
+  </scm> -->
 </project>
