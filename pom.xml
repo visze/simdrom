@@ -27,6 +27,17 @@
 		<module>simdrom-core</module>
 	</modules>
 
+	<distributionManagement>
+  <repository>
+    <id>github-simdrom</id>
+    <url>https://github.com/visze/simdrom.git</url>
+  </repository>
+  <snapshotRepository>
+    <id>github-simdrom</id>
+    <url>https://github.com/visze/simdrom.git</url>
+  </snapshotRepository>
+</distributionManagement>
+
 	<build>
 		<plugins>
 			<!-- JUnit testing -->
