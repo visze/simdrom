@@ -27,6 +27,17 @@
 		<module>simdrom-core</module>
 	</modules>
 
+	<distributionManagement>
+  <repository>
+    <id>github-simdrom</id>
+    <url>https://github.com/visze/simdrom.git</url>
+  </repository>
+  <snapshotRepository>
+    <id>github-simdrom</id>
+    <url>https://github.com/visze/simdrom.git</url>
+  </snapshotRepository>
+</distributionManagement>
+
 	<build>
 		<plugins>
 			<!-- JUnit testing -->
@@ -68,17 +79,26 @@
 					<showDeprecation>true</showDeprecation>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-release-plugin</artifactId>
-				<version>2.5.3</version>
-      </plugin>
+        <plugin>
+            <groupId>external.atlassian.jgitflow</groupId>
+            <artifactId>jgitflow-maven-plugin</artifactId>
+            <version>1.0-m5.1</version>
+            <configuration>
+							<defaultOriginUrl>https://github.com/visze/simdrom.git</defaultOriginUrl>
+							<!-- Keep your maven submodules at the same version as the parent POM -->
+							<autoVersionSubmodules>true</autoVersionSubmodules>
+				      <flowInitContext>
+         				<masterBranchName>master</masterBranchName>
+         				<developBranchName>development</developBranchName>
+         				<versionTagPrefix>v</versionTagPrefix>
+       				</flowInitContext>
+            </configuration>
+        </plugin>
 		</plugins>
 	</build>
 	<scm>
-		<connection>scm:git:git@github.com:visze/simdrom.git</connection>
+		<connection>scm:git:https://github.com/visze/simdrom.git</connection>
 		<url>scm:git:https://github.com/visze/simdrom.git</url>
 		<developerConnection>scm:git:https://github.com/visze/simdrom.git</developerConnection>
-	  <tag>v0.0.2</tag>
   </scm>
 </project>
