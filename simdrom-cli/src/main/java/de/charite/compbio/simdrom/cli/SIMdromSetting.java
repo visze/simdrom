@@ -1,8 +1,5 @@
 package de.charite.compbio.simdrom.cli;
 
-import htsjdk.samtools.util.Interval;
-import htsjdk.samtools.util.IntervalList;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -16,10 +13,10 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.MissingOptionException;
-import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
@@ -31,6 +28,8 @@ import de.charite.compbio.simdrom.cli.exception.WrongIntervalFormatException;
 import de.charite.compbio.simdrom.filter.IFilter;
 import de.charite.compbio.simdrom.filter.InfoFieldFilter;
 import de.charite.compbio.simdrom.interval.SAMFileHeaderBuilder;
+import htsjdk.samtools.util.Interval;
+import htsjdk.samtools.util.IntervalList;
 
 /**
  * Command line options class for the SIMdrom.
@@ -41,8 +40,7 @@ import de.charite.compbio.simdrom.interval.SAMFileHeaderBuilder;
 public class SIMdromSetting {
 
 	/**
-	 * VCF of the background mutation. These mutations are used to sample a new
-	 * mutation file. Required.
+	 * VCF of the background mutation. These mutations are used to sample a new mutation file. Required.
 	 */
 	public static String BACKGROUND_VCF;
 	/**
@@ -50,58 +48,51 @@ public class SIMdromSetting {
 	 */
 	public static String MUTATIONS_VCF;
 	/**
-	 * Probability so choose a variant in the
-	 * {@link SIMdromSetting#BACKGROUND_VCF}.
+	 * Probability so choose a variant in the {@link SIMdromSetting#BACKGROUND_VCF}.
 	 */
 	public static double BACKGROUND_PROBABILITY = 1.0;
 	/**
-	 * If set only the exact number of variants will be selected in the
-	 * {@link SIMdromSetting#BACKGROUND_VCF}.
+	 * If set only the exact number of variants will be selected in the {@link SIMdromSetting#BACKGROUND_VCF}.
 	 */
 	public static int BACKGROUND_VARIANT_NUMBER;
 	/**
-	 * Probability so choose a mutation in the
-	 * {@link SIMdromSetting#MUTATIONS_VCF}.
+	 * Probability so choose a mutation in the {@link SIMdromSetting#MUTATIONS_VCF}.
 	 */
 	public static double MUTATIONS_PROBABILITY = 1.0;
 	/**
-	 * If set only the exact number of variants will be selected in the
-	 * {@link SIMdromSetting#MUTATIONS_VCF}.
+	 * If set only the exact number of variants will be selected in the {@link SIMdromSetting#MUTATIONS_VCF}.
 	 */
 	public static int MUTATIONS_VARIANT_NUMBER;
 	/**
-	 * If set only one random sample will be selected of the
-	 * {@link SIMdromSetting#MUTATIONS_VCF}.
+	 * If set only one (random) sample will be selected of the {@link SIMdromSetting#MUTATIONS_VCF}.
 	 */
 	public static boolean ONLY_ONE_SAMPLE = false;
 	/**
-	 * Identifier in the info-String of the allele frequency in the
-	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 * If not null the given sampel will be selected {@link SIMdromSetting#MUTATIONS_VCF}.
+	 */
+	public static String ONLY_ONE_SAMPLE_NAME;
+	/**
+	 * Identifier in the info-String of the allele frequency in the {@link SIMdromSetting#BACKGROUND_VCF} file.
 	 */
 	public static String BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER;
 	/**
-	 * Identifier in the info-String of the allele frequency in the
-	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the allele frequency in the {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER;
 	/**
-	 * Identifier in the info-String of the ALT allele count in the
-	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the ALT allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String BACKGROUND_ALT_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the ALT allele count in the
-	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 * Identifier in the info-String of the ALT allele count in the {@link SIMdromSetting#BACKGROUND_VCF} file.
 	 */
 	public static String MUTATIONS_ALT_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the all allele count in the
-	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the all allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String BACKGROUND_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the all allele count in the
-	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 * Identifier in the info-String of the all allele count in the {@link SIMdromSetting#BACKGROUND_VCF} file.
 	 */
 	public static String MUTATIONS_ALLELE_COUNT;
 	/**
@@ -124,7 +115,10 @@ public class SIMdromSetting {
 	 * Intervals. only write out at these points.
 	 */
 	public static IntervalList INTERVALS;
-
+	/**
+	 * Output file. null if standard out.
+	 */
+	public static String OUTPUT;
 	/**
 	 * Mutation filter
 	 */
@@ -142,132 +136,97 @@ public class SIMdromSetting {
 		Options options = new Options();
 
 		// help
-		OptionBuilder.withLongOpt("help");
-		OptionBuilder.withDescription("Show this help message");
-		options.addOption(OptionBuilder.create("h"));
+		options.addOption(Option.builder("h").longOpt("help").desc("Show this help message").build());
 
 		// background vcf
-		OptionBuilder.hasArg();
-		OptionBuilder.isRequired();
-		OptionBuilder.withLongOpt("background-population");
-		OptionBuilder
-				.withDescription("VCF of the background population. variants will be uswed to sample a new mutation file.");
-		options.addOption(OptionBuilder.create("b"));
+		options.addOption(Option.builder("b").longOpt("background-population").hasArg().required()
+				.desc("VCF of the background population. variants will be used to sample a new mutation file.")
+				.build());
 
 		// mutations vcf
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("mutations");
-		OptionBuilder.withDescription("Optional. Mutation VCF to spike in.");
-		options.addOption(OptionBuilder.create("m"));
+		options.addOption(
+				Option.builder("m").longOpt("mutations").hasArg().desc("Optional. Mutation VCF to spike in.").build());
 
 		// background probability
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("background-probability");
-		OptionBuilder.withDescription("Default 1.0. Choose variants with this probability.");
-		options.addOption(OptionBuilder.create());
+		options.addOption(Option.builder().longOpt("background-probability").hasArg()
+				.desc("Default 1.0. Choose variants with this probability.").build());
 
 		// background exact counts
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("background-variants-amount");
-		OptionBuilder
-				.withDescription("Optional. Choose exact the given number of variants in the background population.");
-		options.addOption(OptionBuilder.create());
+		options.addOption(Option.builder().longOpt("background-variants-amount").hasArg()
+				.desc("Optional. Choose exact the given number of variants in the background population.").build());
 
 		// mutations probability
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("mutations-probability");
-		OptionBuilder.withDescription("Default 1.0. Choose mutations with this probability.");
-		options.addOption(OptionBuilder.create());
+		options.addOption(Option.builder().longOpt("mutations-probability").hasArg()
+				.desc("Default 1.0. Choose mutations with this probability.").build());
 
 		// background exact counts
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("mutations-variants-amount");
-		OptionBuilder
-				.withDescription("Optional. Choose exact the given number of variants in the mutation population.");
-		options.addOption(OptionBuilder.create());
+		options.addOption(Option.builder().longOpt("mutations-variants-amount").hasArg()
+				.desc("Optional. Choose exact the given number of variants in the mutation population.").build());
 
 		// only one sample
-		OptionBuilder.withLongOpt("single-sample");
-		OptionBuilder
-				.withDescription("Default false. If present, a random sample will be chosen of the background VCF.");
-		options.addOption(OptionBuilder.create());
+		options.addOption(Option.builder().longOpt("single-sample").hasArg().optionalArg(true)
+				.desc("Default false. If present, a random sample will be chosen of the background VCF.").build());
 
 		// background allele frequency identifier
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("background-allele-frequency-identifier");
-		OptionBuilder
-				.withDescription("Optional. If set, the identifier in the info string of the background VCF will be used as single probabilities to call variants.");
-		options.addOption(OptionBuilder.create("bAF"));
+		options.addOption(Option.builder("bAF").longOpt("background-allele-frequency-identifier").hasArg()
+				.desc("Optional. If set, the identifier in the info string of the background VCF will be used as single probabilities to call variants.")
+				.build());
 
 		// mutations allele frequency identifier
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("mutations-allele-frequency-identifier");
-		OptionBuilder
-				.withDescription("Optional. If set, the identifier in the info string of the mutations VCF will be used as single probabilities to call variants.");
-		options.addOption(OptionBuilder.create("mAF"));
+		options.addOption(Option.builder("mAF").hasArg().longOpt("mutations-allele-frequency-identifier")
+				.desc("Optional. If set, the identifier in the info string of the mutations VCF will be used as single probabilities to call variants.")
+				.build());
 
 		// background allele ALT allele count
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("background-alt-allele-count");
-		OptionBuilder
-				.withDescription("Optional. If set, the identifier in the info string of the background VCF will be used to compute single probabilities per variant. (bAC/bAN)");
-		options.addOption(OptionBuilder.create("bAC"));
+		options.addOption(Option.builder("bAC").hasArg().longOpt("background-alt-allele-count")
+				.desc("Optional. If set, the identifier in the info string of the background VCF will be used to compute single probabilities per variant. (bAC/bAN)")
+				.build());
 
 		// mutations allele ALT allele count
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("mutations-alt-allele-count");
-		OptionBuilder
-				.withDescription("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single probabilities per variant. (mAC/mAN)");
-		options.addOption(OptionBuilder.create("mAC"));
+		options.addOption(Option.builder("mAC").hasArg().longOpt("mutations-alt-allele-count")
+				.desc("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single probabilities per variant. (mAC/mAN)")
+				.build());
+
 		// background allele allele count
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("background-allele-count");
-		OptionBuilder
-				.withDescription("Optional. If set, the identifier in the info string of the background VCF will be used to compute single probabilities per variant. (bAC/bAN)");
-		options.addOption(OptionBuilder.create("bAN"));
+		options.addOption(Option.builder("bAN").hasArg().longOpt("background-allele-count")
+				.desc("Optional. If set, the identifier in the info string of the background VCF will be used to compute single probabilities per variant. (bAC/bAN)")
+				.build());
 
 		// mutations allele allele count
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("mutations-allele-count");
-		OptionBuilder
-				.withDescription("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single probabilities per variant. (mAC/mAN)");
-		options.addOption(OptionBuilder.create("mAN"));
+		options.addOption(Option.builder("mAN").hasArg().longOpt("mutations-allele-count")
+				.desc("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single probabilities per variant. (mAC/mAN)")
+				.build());
 
 		// deNovo rate
-		OptionBuilder.hasOptionalArg();
-		OptionBuilder.withLongOpt("de-novo");
-		OptionBuilder
-				.withDescription("Optional. If set, de-novo mutations are spiked in. Standard rate is 1.2*10^-8. But you can provide your own rate with this option. An indexed reference have to be set (see option --reference).");
-		options.addOption(OptionBuilder.create());
+		options.addOption(Option.builder().optionalArg(true).longOpt("de-novo")
+				.desc("Optional. If set, de-novo mutations are spiked in. Standard rate is 1.2*10^-8. But you can provide your own rate with this option. An indexed reference have to be set (see option --reference).")
+				.build());
+
 		// Reference file
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("reference");
-		OptionBuilder
-				.withDescription("Needed for option --de-novo. Please enter the paths to an indexed multi-FASTA file of your reference genome.");
-		options.addOption(OptionBuilder.create());
+		options.addOption(Option.builder().hasArg().longOpt("reference")
+				.desc("Needed for option --de-novo. Please enter the paths to an indexed multi-FASTA file of your reference genome.")
+				.build());
 
 		// spike in log
-		OptionBuilder.hasArg();
-		OptionBuilder.withLongOpt("spike-in-log");
-		OptionBuilder
-				.withDescription("Optional. Path for a log file (TSV-Format) that descibes the spiked in mutations.");
-		options.addOption(OptionBuilder.create());
+		options.addOption(Option.builder().hasArg().longOpt("spike-in-log")
+				.desc("Optional. Path for a log file (TSV-Format) that descibes the spiked in mutations.").build());
 
 		// spike in log
-		OptionBuilder.hasArgs();
-		OptionBuilder.withLongOpt("interval");
-		OptionBuilder
-				.withDescription("Optional. Use the parameter with intervals (chr1:12113-12123) or insert an interval list (file constist of one interval in each line)");
-		options.addOption(OptionBuilder.create("i"));
+		options.addOption(Option.builder("i").hasArgs().longOpt("interval")
+				.desc("Optional. Use the parameter with intervals (chr1:12113-12123) or insert an interval list (file constist of one interval in each line)")
+				.build());
 
 		// mutations info filter
-		OptionBuilder.hasArgs();
-		OptionBuilder.withLongOpt("mutations-info-filter");
-		OptionBuilder
-				.withDescription("Optional. Uses the VCF info field to kepp only variants that passed the filter. Filter is written using the info field id followed by '=' and the value. Like CLNSIG=5");
-		options.addOption(OptionBuilder.create());
+		options.addOption(Option.builder().hasArgs().longOpt("mutations-info-filter")
+				.desc("Optional. Uses the VCF info field to kepp only variants that passed the filter. Filter is written using the info field id followed by '=' and the value. Like CLNSIG=5")
+				.build());
 
-		CommandLineParser parser = new GnuParser();
+		// output
+		options.addOption(Option.builder("o").hasArg().longOpt("output")
+				.desc("Optional. Writes the variants into this (bgzip) VCF file instead of printing it to the standard output.")
+				.build());
+
+		CommandLineParser parser = new DefaultParser();
 		try {
 			CommandLine cmd = parser.parse(options, args);
 			if (args.length == 0 || cmd.hasOption("h")) {
@@ -323,8 +282,10 @@ public class SIMdromSetting {
 				MUTATIONS_ALLELE_COUNT = cmd.getOptionValue("mutations-allele-count");
 			}
 			// single sample
-			if (cmd.hasOption("single-sample"))
+			if (cmd.hasOption("single-sample")) {
 				ONLY_ONE_SAMPLE = true;
+				ONLY_ONE_SAMPLE_NAME = cmd.getOptionValue("single-sample");
+			}
 			// de novo
 			if (cmd.hasOption("de-novo")) {
 				USE_DE_NOVO = true;
@@ -359,8 +320,12 @@ public class SIMdromSetting {
 					}
 				}
 			}
-
 			MUTATIONS_FILTERS = ImmutableSet.<IFilter> builder().addAll(filters).build();
+			
+			// output
+			if (cmd.hasOption("output")) {
+				OUTPUT = cmd.getOptionValue("output");
+			}
 		} catch (MissingOptionException e) {
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.setWidth(120);
@@ -373,8 +338,8 @@ public class SIMdromSetting {
 		}
 	}
 
-	private static List<Interval> getIntervalOfOption(String intervalString) throws IOException,
-			WrongIntervalFormatException {
+	private static List<Interval> getIntervalOfOption(String intervalString)
+			throws IOException, WrongIntervalFormatException {
 		try {
 			List<Interval> output = new ArrayList<Interval>();
 			output.add(getInterval(intervalString));

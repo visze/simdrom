@@ -34,7 +34,11 @@ public class Main {
 
 		backgroundSampler.setProbability(SIMdromSetting.BACKGROUND_PROBABILITY);
 		if (SIMdromSetting.ONLY_ONE_SAMPLE) {
-			VCFRandomSampleSelecter selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF);
+			VCFRandomSampleSelecter selecter;
+			if (SIMdromSetting.ONLY_ONE_SAMPLE_NAME == null)
+				selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF);
+			else 
+				selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF, SIMdromSetting.ONLY_ONE_SAMPLE_NAME);
 			backgroundSampler.setSample(selecter.getSample());
 		}
 		if (SIMdromSetting.BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER != null) {
@@ -73,8 +77,12 @@ public class Main {
 		}
 
 		// 4) Build writer
-		VariantContextWriter writer = new VariantContextWriterBuilder().setOutputVCFStream(System.out)
+		VariantContextWriter writer;
+		if (SIMdromSetting.OUTPUT == null) 
+			writer = new VariantContextWriterBuilder().setOutputVCFStream(System.out)
 				.unsetOption(Options.INDEX_ON_THE_FLY).build();
+		else
+			writer = new VariantContextWriterBuilder().setOutputFile(SIMdromSetting.OUTPUT).build();
 
 		// 5) Generate spikein class
 		boolean log = SIMdromSetting.SPLIKE_IN_LOGFILE != null;

@@ -22,6 +22,11 @@ public class VCFRandomSampleSelecter {
 		this.parser = new VCFFileReader(new File(filePath), false);
 	}
 
+	public VCFRandomSampleSelecter(String filePath, String sample) {
+		this(filePath);
+		this.sample = sample;
+	}
+
 	public String getSample() {
 		if (sample == null)
 			sample = selectSample();
