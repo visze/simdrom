@@ -5,7 +5,7 @@
 
 Simulate Exomes, Genomes, or self defined populations and spike in mutations. SIMdrom is a Java program to randomly select variants in a VCF file and create a new VCF file. A second VCF file can be used to spike in other randomly selected variants. Homozygous and heterozygous genotypes are selected by the Hardy-Weinberg principle. SIMdrom also exposes its functionality through a library API.
 
-SIMdrom is compatible with Java 7 and higher.
+SIMdrom is compatible with Java 8 and higher.
 
 ## Use cases
 
@@ -32,6 +32,10 @@ The new sampled individual will be printed out into the standard output. You can
 or generate a bgziped file
 ```
 # java -jar simdrom-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF | bgzip -c | > newIndividualVCFfile.vcf.gz
+```
+or use the `--output` flag to print it to a (bgzip) file directly.
+```
+# java -jar simdrom-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF --output newIndividualVCFfile.vcf.gz
 ```
 
 ### Use ExAC to generate a random Exome
@@ -84,11 +88,14 @@ For example if you want to sample an american individual use the following comma
 ### Randomly select one genome of 1000Genomes
 
 You can also just select one genotype of an individual of a 1000genomes sample. Therefore you have to download the genotype VCF files from 1000Genomes - ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/ - and the corresponding index files. Right now, SIMdrom can only use one input VCF as background population. Therefore you have to merge the files that are divided by chromosome. Now you can use the `--single-sample` option to select only one genotype.
-
  ```
-# java -jar ALL.ALLChr.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -bAC AC_AMR -bAN AN_AMR
+# java -jar ALL.ALLChr.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz --single-sample
 ```
 
+Attach name of one sample after `--single-sample` and only this specific sample will be selected:
+ ```
+# java -jar ALL.ALLChr.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz --single-sample HG00113
+```
 
 ### Spike in a pathogenic mutation of ClinVar
 

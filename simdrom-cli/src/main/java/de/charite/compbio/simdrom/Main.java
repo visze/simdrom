@@ -1,6 +1,5 @@
 package de.charite.compbio.simdrom;
 
-import htsjdk.samtools.util.Interval;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.writer.Options;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
@@ -10,28 +9,36 @@ import java.io.IOException;
 
 import org.apache.commons.cli.ParseException;
 
-import com.google.common.collect.ImmutableList;
-
 import de.charite.compbio.simdrom.cli.SIMdromSetting;
 import de.charite.compbio.simdrom.io.writer.VCFTSVWriter;
+import de.charite.compbio.simdrom.sampler.DeNovoSampler;
 import de.charite.compbio.simdrom.sampler.SpikeIn;
 import de.charite.compbio.simdrom.sampler.vcf.VCFRandomSampleSelecter;
 import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
 
 /**
- * @author Max Schubach <max.schubach@charite.de>
+ * Main class for the command line interface.
+ * 
+ * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
+ *
  */
 public class Main {
 
 	public static void main(String[] args) throws ParseException, IOException {
 
+		// 1) Parse options
 		SIMdromSetting.parse(args);
 
+		// 2) Set VCF for background population and settings
 		VCFSampler backgroundSampler = new VCFSampler(SIMdromSetting.BACKGROUND_VCF);
 
 		backgroundSampler.setProbability(SIMdromSetting.BACKGROUND_PROBABILITY);
 		if (SIMdromSetting.ONLY_ONE_SAMPLE) {
-			VCFRandomSampleSelecter selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF);
+			VCFRandomSampleSelecter selecter;
+			if (SIMdromSetting.ONLY_ONE_SAMPLE_NAME == null)
+				selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF);
+			else 
+				selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF, SIMdromSetting.ONLY_ONE_SAMPLE_NAME);
 			backgroundSampler.setSample(selecter.getSample());
 		}
 		if (SIMdromSetting.BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER != null) {
@@ -46,7 +53,10 @@ public class Main {
 		}
 		if (SIMdromSetting.INTERVALS != null)
 			backgroundSampler.setIntervals(SIMdromSetting.INTERVALS);
+		if (SIMdromSetting.USE_DE_NOVO)
+			backgroundSampler.setDeNovoGenerator(new DeNovoSampler(SIMdromSetting.DE_NOVO_RATE,SIMdromSetting.REFERENCE));
 
+		// 3) Set VCF for mutation (if set) and settings
 		VCFSampler mutationSampler = null;
 		if (SIMdromSetting.MUTATIONS_VCF != null) {
 			mutationSampler = new VCFSampler(SIMdromSetting.MUTATIONS_VCF);
@@ -66,19 +76,22 @@ public class Main {
 				mutationSampler.setIntervals(SIMdromSetting.INTERVALS);
 		}
 
-		// writer
-		VariantContextWriter writer = new VariantContextWriterBuilder().setOutputVCFStream(System.out)
+		// 4) Build writer
+		VariantContextWriter writer;
+		if (SIMdromSetting.OUTPUT == null) 
+			writer = new VariantContextWriterBuilder().setOutputVCFStream(System.out)
 				.unsetOption(Options.INDEX_ON_THE_FLY).build();
+		else
+			writer = new VariantContextWriterBuilder().setOutputFile(SIMdromSetting.OUTPUT).build();
 
-		// log
+		// 5) Generate spikein class
 		boolean log = SIMdromSetting.SPLIKE_IN_LOGFILE != null;
-
 		SpikeIn spikein = new SpikeIn(backgroundSampler, mutationSampler, log);
 
-		// header
+		// 6) write out VCF header
 		writer.writeHeader(spikein.getVCFHeader());
 
-		// spike in and write out
+		// 7) spike in and write out
 		while (spikein.hasNext()) {
 			VariantContext vc = spikein.next();
 			if (vc == null)
@@ -86,7 +99,7 @@ public class Main {
 			writer.add(vc);
 		}
 
-		// write log
+		// 8) write log if set
 		if (log) {
 			VCFTSVWriter logWriter = new VCFTSVWriter(SIMdromSetting.SPLIKE_IN_LOGFILE);
 			boolean header = false;
@@ -100,10 +113,9 @@ public class Main {
 			logWriter.close();
 		}
 
-		// close properly
+		// 9) close properly and exit properly
 		writer.close();
 		spikein.close();
-		// and exit properly
 		System.exit(0);
 	}
 }

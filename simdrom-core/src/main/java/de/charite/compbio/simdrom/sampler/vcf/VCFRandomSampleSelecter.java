@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * @author Max Schubach <max.schubach@charite.de>
+ * @author Max Schubach {@literal <max.schubach@charite.de>}
  *
  */
 public class VCFRandomSampleSelecter {
@@ -20,6 +20,11 @@ public class VCFRandomSampleSelecter {
 
 	public VCFRandomSampleSelecter(String filePath) {
 		this.parser = new VCFFileReader(new File(filePath), false);
+	}
+
+	public VCFRandomSampleSelecter(String filePath, String sample) {
+		this(filePath);
+		this.sample = sample;
 	}
 
 	public String getSample() {

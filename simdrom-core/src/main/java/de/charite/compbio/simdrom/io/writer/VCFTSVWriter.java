@@ -108,7 +108,7 @@ public class VCFTSVWriter implements Closeable {
 			result = (Boolean) val ? "" : null; // empty string for true, null
 												// for false
 		else if (val instanceof List) {
-			result = formatVCFField(((List) val).toArray());
+			result = formatVCFField(((List<?>) val).toArray());
 		} else if (val.getClass().isArray()) {
 			final int length = Array.getLength(val);
 			if (length == 0)

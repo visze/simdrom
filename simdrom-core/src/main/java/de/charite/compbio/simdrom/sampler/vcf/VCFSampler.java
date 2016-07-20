@@ -3,21 +3,6 @@
  */
 package de.charite.compbio.simdrom.sampler.vcf;
 
-import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.util.CloseableIterator;
-import htsjdk.samtools.util.Interval;
-import htsjdk.samtools.util.IntervalList;
-import htsjdk.variant.variantcontext.Allele;
-import htsjdk.variant.variantcontext.Genotype;
-import htsjdk.variant.variantcontext.GenotypeBuilder;
-import htsjdk.variant.variantcontext.VariantContext;
-import htsjdk.variant.variantcontext.VariantContextBuilder;
-import htsjdk.variant.vcf.VCFFileReader;
-import htsjdk.variant.vcf.VCFFormatHeaderLine;
-import htsjdk.variant.vcf.VCFHeader;
-import htsjdk.variant.vcf.VCFHeaderLine;
-import htsjdk.variant.vcf.VCFHeaderLineType;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,9 +18,25 @@ import java.util.Set;
 import com.google.common.collect.ImmutableSet;
 
 import de.charite.compbio.simdrom.filter.IFilter;
+import de.charite.compbio.simdrom.sampler.DeNovoSampler;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.util.CloseableIterator;
+import htsjdk.samtools.util.Interval;
+import htsjdk.samtools.util.IntervalList;
+import htsjdk.variant.variantcontext.Allele;
+import htsjdk.variant.variantcontext.Genotype;
+import htsjdk.variant.variantcontext.GenotypeBuilder;
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
+import htsjdk.variant.vcf.VCFFileReader;
+import htsjdk.variant.vcf.VCFFormatHeaderLine;
+import htsjdk.variant.vcf.VCFHeader;
+import htsjdk.variant.vcf.VCFHeaderLine;
+import htsjdk.variant.vcf.VCFHeaderLineType;
 
 /**
- * @author Max Schubach <max.schubach@charite.de>
+ * 
+ * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
 public class VCFSampler implements Iterator<VariantContext> {
@@ -52,13 +53,14 @@ public class VCFSampler implements Iterator<VariantContext> {
 	private CloseableIterator<VariantContext> iterator;
 	private Random random;
 	private String filePath;
+	private DeNovoSampler deNovoGenerator;
 	private ImmutableSet<IFilter> filters;
 	// intervals
 	private IntervalList intervals;
 	private int intervalPosition = 0;
 
-	public VCFSampler(String filePath) {
-		this.filePath = filePath;
+	public VCFSampler(String path) {
+		this.filePath = path;
 		this.parser = new VCFFileReader(new File(filePath), false);
 	}
 
@@ -135,6 +137,8 @@ public class VCFSampler implements Iterator<VariantContext> {
 			Map<Integer, Boolean> alleles = useAlleles(candidate);
 			if (!alleles.isEmpty()) {
 				output = createVariantContextWithGenotype(candidate, alleles);
+				if (output == null)
+					continue;
 				break;
 			}
 		}
@@ -150,9 +154,9 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	private VariantContext createVariantContextWithGenotype(VariantContext candidate, Map<Integer, Boolean> alleles) {
 		if (useSample()) {
-			if (candidate.hasGenotype(getSample()))
-				return new VariantContextBuilder(candidate).alleles(getAlleles(candidate, alleles.keySet()))
-						.genotypes(candidate.getGenotypes(getSample())).make();
+			Genotype genotype = candidate.getGenotype(getSample());
+			if (!genotype.isHomRef())
+				return new VariantContextBuilder(candidate).genotypes(candidate.getGenotypes(getSample())).make();
 			else
 				return null;
 		} else {
@@ -161,6 +165,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 		}
 	}
 
+	
 	private Collection<Allele> getAlleles(VariantContext candidate, Set<Integer> posOfAllele) {
 		Collection<Allele> alleles = new ArrayList<Allele>();
 		alleles.add(candidate.getReference());
@@ -373,6 +378,10 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	public void setIntervals(IntervalList intervals) {
 		this.intervals = intervals.uniqued().sorted();
+	}
+	
+	public void setDeNovoGenerator(DeNovoSampler deNovoGenerator) {
+		this.deNovoGenerator = deNovoGenerator;
 	}
 
 }
