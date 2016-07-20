@@ -86,9 +86,8 @@
 		</plugins>
 	</build>
 	<scm>
-		<connection>scm:git:git@github.com:visze/simdrom.git</connection>
+		<connection>scm:git:https://github.com/visze/simdrom.git</connection>
 		<url>scm:git:https://github.com/visze/simdrom.git</url>
 		<developerConnection>scm:git:https://github.com/visze/simdrom.git</developerConnection>
-	  <tag>master</tag>
   </scm>
 </project>
