@@ -60,6 +60,10 @@
 <pre><code># java -jar simdrom-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF | bgzip -c | &gt; newIndividualVCFfile.vcf.gz
 </code></pre>
 
+<p>or use the <code>--output`</code> flag to print it to a (bgzip) file directly.</p>
+<pre><code># java -jar simdrom-cli-0.0.1.jar -b ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz -bAF AF --output newIndividualVCFfile.vcf.gz
+</code></pre>
+
 <h3>
 <a id="use-exac-to-generate-a-random-exome" class="anchor" href="#use-exac-to-generate-a-random-exome" aria-hidden="true"><span class="octicon octicon-link"></span></a>Use ExAC to generate a random Exome</h3>
 
@@ -173,8 +177,15 @@
 
 <p>You can also just select one genotype of an individual of a 1000genomes sample. Therefore you have to download the genotype VCF files from 1000Genomes - ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/ - and the corresponding index files. Right now, SIMdrom can only use one input VCF as background population. Therefore you have to merge the files that are divided by chromosome. Now you can use the <code>--single-sample</code> option to select only one genotype.</p>
 
-<pre><code># java -jar ALL.ALLChr.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -bAC AC_AMR -bAN AN_AMR
+<pre><code># java -jar ALL.ALLChr.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz --single-sample
 </code></pre>
+
+<p>Attach name of one sample after `--single-sample` and only this specific sample will be selected:</p>
+
+<pre><code>
+# java -jar ALL.ALLChr.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz --single-sample HG00113
+</code></pre>
+
 
 <h3>
 <a id="spike-in-a-pathogenic-mutation-of-clinvar" class="anchor" href="#spike-in-a-pathogenic-mutation-of-clinvar" aria-hidden="true"><span class="octicon octicon-link"></span></a>Spike in a pathogenic mutation of ClinVar</h3>
