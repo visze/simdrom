@@ -4,7 +4,7 @@
 	<groupId>de.charite.compbio</groupId>
 	<artifactId>simdrom</artifactId>
 	<packaging>pom</packaging>
-	<version>0.0.2-SNAPSHOT</version>
+	<version>0.0.2</version>
 	<name>simdrom</name>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
