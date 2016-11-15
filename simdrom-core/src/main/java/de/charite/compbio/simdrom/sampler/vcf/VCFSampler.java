@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +22,7 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.util.CloseableIterator;
 import htsjdk.samtools.util.Interval;
 import htsjdk.samtools.util.IntervalList;
+import htsjdk.samtools.util.RuntimeEOFException;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
@@ -39,7 +39,7 @@ import htsjdk.variant.vcf.VCFHeaderLineType;
  * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
-public class VCFSampler implements Iterator<VariantContext> {
+public class VCFSampler implements CloseableIterator<VariantContext> {
 
 	private double probability;
 	private List<Integer> selectAlleles;
@@ -48,20 +48,147 @@ public class VCFSampler implements Iterator<VariantContext> {
 	private String afIdentifier;
 	private String acIdentifier;
 	private String anIdentifier;
-	private String sample = null;
-	private VCFFileReader parser;
+	private String sample;
+	private VCFFileReader reader;
 	private CloseableIterator<VariantContext> iterator;
+	private VariantContext next;
 	private Random random;
-	private String filePath;
 	private DeNovoSampler deNovoGenerator;
 	private ImmutableSet<IFilter> filters;
 	// intervals
 	private IntervalList intervals;
 	private int intervalPosition = 0;
 
-	public VCFSampler(String path) {
-		this.filePath = path;
-		this.parser = new VCFFileReader(new File(filePath), false);
+	private VCFSampler(VCFFileReader reader, double probability, String sample, int variantsAmount, String afIdentifier,
+			String acIdentifier, String anIdentifier, ImmutableSet<IFilter> filters, IntervalList intervals,
+			DeNovoSampler deNovoSampler, List<Integer> selectAlleles) {
+		this.reader = reader;
+		this.probability = probability;
+		this.sample = sample;
+		this.variantsAmount = variantsAmount;
+		this.afIdentifier = afIdentifier;
+		this.acIdentifier = acIdentifier;
+		this.anIdentifier = anIdentifier;
+		this.filters = filters;
+		this.intervals = intervals;
+		this.selectAlleles = selectAlleles;
+		this.deNovoGenerator = deNovoSampler;
+		this.next = getNextVariant();
+	}
+
+	public static final class Builder {
+
+		private VCFFileReader reader;
+		private double probability = 1.0;
+		private List<Integer> selectAlleles;
+		private String sample = null;
+		private int variantsAmount = 0;
+		private String afIdentifier = null;
+		private String acIdentifier = null;
+		private String anIdentifier = null;
+		private ImmutableSet<IFilter> filters = ImmutableSet.<IFilter> builder().build();
+		IntervalList intervals = new IntervalList(new SAMFileHeader());
+		DeNovoSampler deNovoSampler;
+
+		public Builder() {
+		}
+
+		public Builder file(String path) {
+			this.reader = new VCFFileReader(new File(path));
+			return this;
+		}
+
+		public Builder file(File file) {
+			this.reader = new VCFFileReader(file);
+			return this;
+		}
+
+		public Builder vcfReader(VCFFileReader reader) {
+			this.reader = reader;
+			return this;
+		}
+
+		public Builder probability(double probability) {
+			this.probability = probability;
+			return this;
+		}
+
+		public Builder sample(String sample) {
+			this.sample = sample;
+			return this;
+		}
+
+		public Builder afIdentifier(String afIdentifier) {
+			this.afIdentifier = afIdentifier;
+			return this;
+		}
+
+		public Builder acIdentifier(String acIdentifier) {
+			this.acIdentifier = acIdentifier;
+			return this;
+		}
+
+		public Builder anIdentifier(String anIdentifier) {
+			this.anIdentifier = anIdentifier;
+			return this;
+		}
+
+		public Builder variantsAmount(int variantsAmount) {
+			this.variantsAmount = variantsAmount;
+			return this;
+		}
+
+		public Builder intervals(IntervalList intervals) {
+			this.intervals = intervals.uniqued().sorted();
+			return this;
+		}
+
+		public Builder deNovoGenerator(DeNovoSampler deNovoSampler) {
+			this.deNovoSampler = deNovoSampler;
+			return this;
+		}
+
+		public Builder filters(ImmutableSet<IFilter> filters) {
+			this.filters = filters;
+			return this;
+
+		}
+
+		public VCFSampler build() {
+
+			// returns null if the reader is not set (not useful)
+			if (reader == null)
+				throw new RuntimeEOFException("No variants are set for the sampler: The reader cannot be null");
+
+			// do not use it if one of them is not set!
+			if (acIdentifier == null || anIdentifier == null) {
+				acIdentifier = null;
+				anIdentifier = null;
+			}
+
+			if (variantsAmount < 0)
+				variantsAmount = 0;
+			else if (variantsAmount > 0) {
+				VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(reader.iterator(), filters);
+				setCounts(counter.getCounts());
+			}
+			return new VCFSampler(reader, probability, sample, variantsAmount, afIdentifier, acIdentifier, anIdentifier,
+					filters, intervals, deNovoSampler, selectAlleles);
+		}
+
+		private void setCounts(int counts) {
+			List<Integer> randomAlleles = new ArrayList<Integer>(counts);
+			for (int i = 0; i < counts; i++) {
+				randomAlleles.add(i);
+			}
+			Collections.shuffle(randomAlleles);
+			this.selectAlleles = new ArrayList<Integer>(this.variantsAmount);
+			for (int i = 0; i < this.variantsAmount; i++) {
+				this.selectAlleles.add(randomAlleles.get(i));
+			}
+			Collections.sort(this.selectAlleles);
+		}
+
 	}
 
 	public CloseableIterator<VariantContext> getIterator() {
@@ -70,7 +197,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 			if (useIntervals())
 				this.iterator = getNextIntervalInterator();
 			else
-				this.iterator = this.parser.iterator();
+				this.iterator = this.reader.iterator();
 		}
 		return iterator;
 	}
@@ -78,7 +205,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 	private CloseableIterator<VariantContext> getNextIntervalInterator() {
 		Interval interval = nextInterval();
 		if (interval != null)
-			return this.parser.query(interval.getContig(), interval.getStart(), interval.getEnd());
+			return this.reader.query(interval.getContig(), interval.getStart(), interval.getEnd());
 		else
 			return null;
 
@@ -93,16 +220,25 @@ public class VCFSampler implements Iterator<VariantContext> {
 		return output;
 	}
 
-	public void setFilters(ImmutableSet<IFilter> filters) {
-		this.filters = filters;
-	}
-
 	@Override
 	public boolean hasNext() {
-		// FIXME has next can be true, but next can give back null!
+		return next != null;
+	}
+
+	/**
+	 * Has next can be true, but next can give back null! But it is important to set the next iterator.
+	 * 
+	 * @return boolean
+	 */
+	private boolean checkForNext() {
+		// FIXME
 		if (useIntervals())
-			while (getIterator() != null && !getIterator().hasNext())
+			while (getIterator() != null && !getIterator().hasNext()) {
+				// close the actual
+				this.iterator.close();
+				// get a new one
 				this.iterator = getNextIntervalInterator();
+			}
 		if (getIterator() == null)
 			return false;
 		return getIterator().hasNext();
@@ -114,7 +250,9 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	@Override
 	public VariantContext next() {
-		return getNextVariant();
+		VariantContext actual = next;
+		next = getNextVariant();
+		return actual;
 	}
 
 	@Override
@@ -124,7 +262,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 
 	private VariantContext getNextVariant() {
 		VariantContext output = null;
-		while (hasNext() && output == null) {
+		while (checkForNext() && output == null) {
 			// get next line
 			VariantContext candidate = getIterator().next();
 
@@ -165,7 +303,6 @@ public class VCFSampler implements Iterator<VariantContext> {
 		}
 	}
 
-	
 	private Collection<Allele> getAlleles(VariantContext candidate, Set<Integer> posOfAllele) {
 		Collection<Allele> alleles = new ArrayList<Allele>();
 		alleles.add(candidate.getReference());
@@ -273,18 +410,6 @@ public class VCFSampler implements Iterator<VariantContext> {
 		return random.nextDouble();
 	}
 
-	public void setProbability(double probability) {
-		this.probability = probability;
-		if (useCounts()) {
-			VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(filePath, getFilters());
-			setCounts(counter.getCounts());
-		}
-	}
-
-	public void setSample(String sample) {
-		this.sample = sample;
-	}
-
 	public String getSample() {
 		return sample;
 	}
@@ -296,7 +421,7 @@ public class VCFSampler implements Iterator<VariantContext> {
 	public VCFHeader getFileHeader() {
 
 		Set<VCFHeaderLine> set = new LinkedHashSet<VCFHeaderLine>();
-		set.addAll(parser.getFileHeader().getMetaDataInInputOrder());
+		set.addAll(reader.getFileHeader().getMetaDataInInputOrder());
 		set.add(new VCFFormatHeaderLine("GT", 1, VCFHeaderLineType.String, "Genotype"));
 		return new VCFHeader(set, getSampleNames());
 	}
@@ -305,27 +430,6 @@ public class VCFSampler implements Iterator<VariantContext> {
 		if (getSample() == null)
 			return ImmutableSet.<String> builder().add("Sampled").build();
 		return ImmutableSet.<String> builder().add(getSample()).build();
-	}
-
-	private void setCounts(int counts) {
-		List<Integer> randomAlleles = new ArrayList<Integer>(counts);
-		for (int i = 0; i < counts; i++) {
-			randomAlleles.add(i);
-		}
-		Collections.shuffle(randomAlleles);
-		this.selectAlleles = new ArrayList<Integer>(getVariantsAmount());
-		for (int i = 0; i < getVariantsAmount(); i++) {
-			this.selectAlleles.add(randomAlleles.get(i));
-		}
-		Collections.sort(this.selectAlleles);
-	}
-
-	public void setAFIdentifier(String afIdentifier) {
-		this.afIdentifier = afIdentifier;
-	}
-
-	public void setVariantsAmount(int variantsAmount) {
-		this.variantsAmount = variantsAmount;
 	}
 
 	public int getVariantsAmount() {
@@ -345,12 +449,11 @@ public class VCFSampler implements Iterator<VariantContext> {
 	}
 
 	public void close() {
-		parser.close();
+		iterator.close();
+		reader.close();
 	}
 
 	public ImmutableSet<IFilter> getFilters() {
-		if (filters == null)
-			filters = ImmutableSet.<IFilter> builder().build();
 		return filters;
 	}
 
@@ -358,30 +461,12 @@ public class VCFSampler implements Iterator<VariantContext> {
 		return acIdentifier;
 	}
 
-	public void setACIdentifier(String acIdentifier) {
-		this.acIdentifier = acIdentifier;
-	}
-
 	public String getANIdentifier() {
 		return anIdentifier;
 	}
 
-	public void setANIdentifier(String anIdentifier) {
-		this.anIdentifier = anIdentifier;
-	}
-
 	public IntervalList getIntervals() {
-		if (intervals == null)
-			intervals = new IntervalList(new SAMFileHeader());
 		return intervals;
-	}
-
-	public void setIntervals(IntervalList intervals) {
-		this.intervals = intervals.uniqued().sorted();
-	}
-	
-	public void setDeNovoGenerator(DeNovoSampler deNovoGenerator) {
-		this.deNovoGenerator = deNovoGenerator;
 	}
 
 }

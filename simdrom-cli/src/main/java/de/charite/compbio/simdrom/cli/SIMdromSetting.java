@@ -64,13 +64,21 @@ public class SIMdromSetting {
 	 */
 	public static int MUTATIONS_VARIANT_NUMBER;
 	/**
+	 * If set only one (random) sample will be selected of the {@link SIMdromSetting#BACKGROUND_VCF}.
+	 */
+	public static boolean ONLY_ONE_BACKGROUND_SAMPLE = false;
+	/**
+	 * If not null the given sample will be selected {@link SIMdromSetting#BACKGROUND_VCF}.
+	 */
+	public static String ONLY_ONE_BACKGROUND_SAMPLE_NAME;
+	/**
 	 * If set only one (random) sample will be selected of the {@link SIMdromSetting#MUTATIONS_VCF}.
 	 */
-	public static boolean ONLY_ONE_SAMPLE = false;
+	public static boolean ONLY_ONE_MUTATIONS_SAMPLE = false;
 	/**
-	 * If not null the given sampel will be selected {@link SIMdromSetting#MUTATIONS_VCF}.
+	 * If not null the given sample will be selected {@link SIMdromSetting#MUTATIONS_VCF}.
 	 */
-	public static String ONLY_ONE_SAMPLE_NAME;
+	public static String ONLY_ONE_MUTATIONS_SAMPLE_NAME;
 	/**
 	 * Identifier in the info-String of the allele frequency in the {@link SIMdromSetting#BACKGROUND_VCF} file.
 	 */
@@ -163,9 +171,13 @@ public class SIMdromSetting {
 		options.addOption(Option.builder().longOpt("mutations-variants-amount").hasArg()
 				.desc("Optional. Choose exact the given number of variants in the mutation population.").build());
 
-		// only one sample
-		options.addOption(Option.builder().longOpt("single-sample").hasArg().optionalArg(true)
-				.desc("Default false. If present, a random sample will be chosen of the background VCF.").build());
+		// only one sample of background
+		options.addOption(Option.builder().longOpt("single-sample-background").hasArg().optionalArg(true)
+				.desc("Default false. If present, a random sample will be chosen of the background VCF (-b).").build());
+		
+		// only one sample of mutations
+		options.addOption(Option.builder().longOpt("single-sample-mutations").hasArg().optionalArg(true)
+				.desc("Default false. If present, a random sample will be chosen of the mutations VCF (-m).").build());
 
 		// background allele frequency identifier
 		options.addOption(Option.builder("bAF").longOpt("background-allele-frequency-identifier").hasArg()
@@ -281,10 +293,15 @@ public class SIMdromSetting {
 			if (cmd.hasOption("mutations-allele-count")) {
 				MUTATIONS_ALLELE_COUNT = cmd.getOptionValue("mutations-allele-count");
 			}
-			// single sample
-			if (cmd.hasOption("single-sample")) {
-				ONLY_ONE_SAMPLE = true;
-				ONLY_ONE_SAMPLE_NAME = cmd.getOptionValue("single-sample");
+			// single sample background
+			if (cmd.hasOption("single-sample-background")) {
+				ONLY_ONE_BACKGROUND_SAMPLE = true;
+				ONLY_ONE_BACKGROUND_SAMPLE_NAME = cmd.getOptionValue("single-sample-background");
+			}
+			// single sample mutations
+			if (cmd.hasOption("single-sample-mutations")) {
+				ONLY_ONE_MUTATIONS_SAMPLE = true;
+				ONLY_ONE_MUTATIONS_SAMPLE_NAME = cmd.getOptionValue("single-sample-mutations");
 			}
 			// de novo
 			if (cmd.hasOption("de-novo")) {

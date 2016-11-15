@@ -1,19 +1,20 @@
 package de.charite.compbio.simdrom.sampler;
 
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
+import htsjdk.samtools.util.CloseableIterator;
+import htsjdk.variant.variantcontext.GenotypeBuilder;
 import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
 import htsjdk.variant.vcf.VCFHeader;
 import htsjdk.variant.vcf.VCFHeaderLine;
 import htsjdk.variant.vcf.VCFHeaderLineType;
 import htsjdk.variant.vcf.VCFInfoHeaderLine;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
-
-public class SpikeIn implements Iterator<VariantContext> {
+public class SpikeIn implements CloseableIterator<VariantContext> {
 
 	private VCFSampler backgroundSampler;
 	private VCFSampler mutationSampler;
@@ -35,8 +36,17 @@ public class SpikeIn implements Iterator<VariantContext> {
 
 		if (backgroundSampler.hasNext())
 			backgroundVC = backgroundSampler.next();
-		if ((mutationSampler != null && mutationSampler.hasNext()))
+		if ((mutationSampler != null && mutationSampler.hasNext())) {
 			mutationsVC = mutationSampler.next();
+			// FIXME make it nicer!
+			if (mutationsVC != null)
+				mutationsVC = new VariantContextBuilder(mutationsVC)
+						.genotypes(
+								GenotypeBuilder.create(backgroundSampler.getSample(),
+										(mutationSampler.getSample() == null ? mutationsVC.getAlleles()
+												: mutationsVC.getGenotype(mutationSampler.getSample()).getAlleles())))
+						.make();
+		}
 	}
 
 	public VCFHeader getVCFHeader() {
@@ -47,7 +57,7 @@ public class SpikeIn implements Iterator<VariantContext> {
 				"Flag in 1000 genomes that is not set in the header"));
 		if (mutationSampler != null) {
 			metaData.addAll(mutationSampler.getFileHeader().getMetaDataInInputOrder());
-		
+
 		}
 		return new VCFHeader(metaData, backgroundSampler.getSampleNames());
 	}
@@ -61,10 +71,10 @@ public class SpikeIn implements Iterator<VariantContext> {
 	public VariantContext next() {
 		return getNextVariantContext();
 	}
-	
+
 	@Override
 	public void remove() {
-	    throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException();
 	}
 
 	private VariantContext getNextVariantContext() {
@@ -90,8 +100,15 @@ public class SpikeIn implements Iterator<VariantContext> {
 
 			if (backgroundSelection)
 				backgroundVC = backgroundSampler.next();
-			else
+			else {
 				mutationsVC = mutationSampler.next();
+				// FIXME make it nicer!
+				if (mutationsVC != null)
+					mutationsVC = new VariantContextBuilder(mutationsVC)
+							.genotypes(GenotypeBuilder.create(backgroundSampler.getSample(),
+									mutationsVC.getGenotype(mutationSampler.getSample()).getAlleles()))
+							.make();
+			}
 		}
 		if (!backgroundSelection)
 			addLog(output);

@@ -1,10 +1,5 @@
 package de.charite.compbio.simdrom;
 
-import htsjdk.variant.variantcontext.VariantContext;
-import htsjdk.variant.variantcontext.writer.Options;
-import htsjdk.variant.variantcontext.writer.VariantContextWriter;
-import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder;
-
 import java.io.IOException;
 
 import org.apache.commons.cli.ParseException;
@@ -15,6 +10,10 @@ import de.charite.compbio.simdrom.sampler.DeNovoSampler;
 import de.charite.compbio.simdrom.sampler.SpikeIn;
 import de.charite.compbio.simdrom.sampler.vcf.VCFRandomSampleSelecter;
 import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
+import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.writer.Options;
+import htsjdk.variant.variantcontext.writer.VariantContextWriter;
+import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder;
 
 /**
  * Main class for the command line interface.
@@ -30,63 +29,75 @@ public class Main {
 		SIMdromSetting.parse(args);
 
 		// 2) Set VCF for background population and settings
-		VCFSampler backgroundSampler = new VCFSampler(SIMdromSetting.BACKGROUND_VCF);
+		VCFSampler.Builder backgroundSamplerBuilder = new VCFSampler.Builder();
 
-		backgroundSampler.setProbability(SIMdromSetting.BACKGROUND_PROBABILITY);
-		if (SIMdromSetting.ONLY_ONE_SAMPLE) {
+		// VCFSampler backgroundSampler = new VCFSampler(SIMdromSetting.BACKGROUND_VCF);
+		backgroundSamplerBuilder = backgroundSamplerBuilder.file(SIMdromSetting.BACKGROUND_VCF)
+				.probability(SIMdromSetting.BACKGROUND_PROBABILITY);
+
+		// select (random) sample if set
+		if (SIMdromSetting.ONLY_ONE_BACKGROUND_SAMPLE) {
 			VCFRandomSampleSelecter selecter;
-			if (SIMdromSetting.ONLY_ONE_SAMPLE_NAME == null)
+			if (SIMdromSetting.ONLY_ONE_BACKGROUND_SAMPLE_NAME == null)
 				selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF);
-			else 
-				selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF, SIMdromSetting.ONLY_ONE_SAMPLE_NAME);
-			backgroundSampler.setSample(selecter.getSample());
+			else
+				selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF,
+						SIMdromSetting.ONLY_ONE_BACKGROUND_SAMPLE_NAME);
+			backgroundSamplerBuilder.sample(selecter.getSample());
 		}
-		if (SIMdromSetting.BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER != null) {
-			backgroundSampler.setAFIdentifier(SIMdromSetting.BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER);
-		}
-		if (SIMdromSetting.BACKGROUND_ALT_ALLELE_COUNT != null && SIMdromSetting.BACKGROUND_ALLELE_COUNT != null) {
-			backgroundSampler.setACIdentifier(SIMdromSetting.BACKGROUND_ALT_ALLELE_COUNT);
-			backgroundSampler.setANIdentifier(SIMdromSetting.BACKGROUND_ALLELE_COUNT);
-		}
-		if (SIMdromSetting.BACKGROUND_VARIANT_NUMBER > 0) {
-			backgroundSampler.setVariantsAmount(SIMdromSetting.BACKGROUND_VARIANT_NUMBER);
-		}
-		if (SIMdromSetting.INTERVALS != null)
-			backgroundSampler.setIntervals(SIMdromSetting.INTERVALS);
+		backgroundSamplerBuilder = backgroundSamplerBuilder
+				.afIdentifier(SIMdromSetting.BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER)
+				.acIdentifier(SIMdromSetting.BACKGROUND_ALT_ALLELE_COUNT)
+				.anIdentifier(SIMdromSetting.BACKGROUND_ALLELE_COUNT);
+
+		backgroundSamplerBuilder = backgroundSamplerBuilder.variantsAmount(SIMdromSetting.BACKGROUND_VARIANT_NUMBER);
+
+		backgroundSamplerBuilder = backgroundSamplerBuilder.intervals(SIMdromSetting.INTERVALS);
+
 		if (SIMdromSetting.USE_DE_NOVO)
-			backgroundSampler.setDeNovoGenerator(new DeNovoSampler(SIMdromSetting.DE_NOVO_RATE,SIMdromSetting.REFERENCE));
+			backgroundSamplerBuilder = backgroundSamplerBuilder
+					.deNovoGenerator(new DeNovoSampler(SIMdromSetting.DE_NOVO_RATE, SIMdromSetting.REFERENCE));
 
 		// 3) Set VCF for mutation (if set) and settings
-		VCFSampler mutationSampler = null;
+		// VCFSampler mutationSampler = null;
+		VCFSampler.Builder mutationSamplerBuilder = new VCFSampler.Builder();
 		if (SIMdromSetting.MUTATIONS_VCF != null) {
-			mutationSampler = new VCFSampler(SIMdromSetting.MUTATIONS_VCF);
-			mutationSampler.setFilters(SIMdromSetting.MUTATIONS_FILTERS);
-			mutationSampler.setProbability(SIMdromSetting.MUTATIONS_PROBABILITY);
-			if (SIMdromSetting.MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER != null) {
-				mutationSampler.setAFIdentifier(SIMdromSetting.MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER);
+
+			mutationSamplerBuilder = mutationSamplerBuilder.file(SIMdromSetting.MUTATIONS_VCF)
+					.probability(SIMdromSetting.MUTATIONS_PROBABILITY).filters(SIMdromSetting.MUTATIONS_FILTERS);
+
+			// select (random) sample if set
+			if (SIMdromSetting.ONLY_ONE_MUTATIONS_SAMPLE) {
+				VCFRandomSampleSelecter selecter;
+				if (SIMdromSetting.ONLY_ONE_MUTATIONS_SAMPLE_NAME == null)
+					selecter = new VCFRandomSampleSelecter(SIMdromSetting.MUTATIONS_VCF);
+				else
+					selecter = new VCFRandomSampleSelecter(SIMdromSetting.MUTATIONS_VCF,
+							SIMdromSetting.ONLY_ONE_MUTATIONS_SAMPLE_NAME);
+				mutationSamplerBuilder.sample(selecter.getSample());
 			}
-			if (SIMdromSetting.MUTATIONS_VARIANT_NUMBER > 0) {
-				mutationSampler.setVariantsAmount(SIMdromSetting.MUTATIONS_VARIANT_NUMBER);
-			}
-			if (SIMdromSetting.MUTATIONS_ALT_ALLELE_COUNT != null && SIMdromSetting.MUTATIONS_ALLELE_COUNT != null) {
-				mutationSampler.setACIdentifier(SIMdromSetting.MUTATIONS_ALT_ALLELE_COUNT);
-				mutationSampler.setANIdentifier(SIMdromSetting.MUTATIONS_ALLELE_COUNT);
-			}
-			if (SIMdromSetting.INTERVALS != null)
-				mutationSampler.setIntervals(SIMdromSetting.INTERVALS);
+			mutationSamplerBuilder = mutationSamplerBuilder
+					.afIdentifier(SIMdromSetting.MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER)
+					.acIdentifier(SIMdromSetting.MUTATIONS_ALT_ALLELE_COUNT)
+					.anIdentifier(SIMdromSetting.MUTATIONS_ALLELE_COUNT);
+
+			mutationSamplerBuilder = mutationSamplerBuilder.variantsAmount(SIMdromSetting.MUTATIONS_VARIANT_NUMBER);
+
+			mutationSamplerBuilder = mutationSamplerBuilder.intervals(SIMdromSetting.INTERVALS);
+
 		}
 
 		// 4) Build writer
 		VariantContextWriter writer;
-		if (SIMdromSetting.OUTPUT == null) 
+		if (SIMdromSetting.OUTPUT == null)
 			writer = new VariantContextWriterBuilder().setOutputVCFStream(System.out)
-				.unsetOption(Options.INDEX_ON_THE_FLY).build();
+					.unsetOption(Options.INDEX_ON_THE_FLY).build();
 		else
 			writer = new VariantContextWriterBuilder().setOutputFile(SIMdromSetting.OUTPUT).build();
 
 		// 5) Generate spikein class
 		boolean log = SIMdromSetting.SPLIKE_IN_LOGFILE != null;
-		SpikeIn spikein = new SpikeIn(backgroundSampler, mutationSampler, log);
+		SpikeIn spikein = new SpikeIn(backgroundSamplerBuilder.build(), mutationSamplerBuilder.build(), log);
 
 		// 6) write out VCF header
 		writer.writeHeader(spikein.getVCFHeader());

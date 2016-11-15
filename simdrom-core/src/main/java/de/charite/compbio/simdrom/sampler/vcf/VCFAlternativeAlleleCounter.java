@@ -19,12 +19,12 @@ import de.charite.compbio.simdrom.filter.IFilter;
  */
 public class VCFAlternativeAlleleCounter {
 
-	private VCFFileReader parser;
+	private CloseableIterator<VariantContext>  iterator;
 	ImmutableSet<IFilter> filters;
 	private int counts = -1;
 
-	public VCFAlternativeAlleleCounter(String filePath, ImmutableSet<IFilter> filters) {
-		this.parser = new VCFFileReader(new File(filePath), false);
+	public VCFAlternativeAlleleCounter(CloseableIterator<VariantContext> iterator, ImmutableSet<IFilter> filters) {
+		this.iterator = iterator;
 		this.filters = filters;
 	}
 
@@ -36,7 +36,6 @@ public class VCFAlternativeAlleleCounter {
 
 	private void count() {
 		counts = 0;
-		CloseableIterator<VariantContext> iterator = parser.iterator();
 		while (iterator.hasNext()) {
 			VariantContext vc = iterator.next();
 			for (IFilter iFilter : filters) {
@@ -45,6 +44,7 @@ public class VCFAlternativeAlleleCounter {
 			if (vc != null)
 				counts += vc.getAlternateAlleles().size();
 		}
-		parser.close();
+		// FIXME Really close it? test this!
+		iterator.close();
 	}
 }
