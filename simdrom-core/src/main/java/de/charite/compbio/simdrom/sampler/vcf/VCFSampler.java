@@ -36,21 +36,75 @@ import htsjdk.variant.vcf.VCFHeaderLineType;
 
 /**
  * 
+ * The {@link VCFSampler} class uses a VCF file as basis and acts as an iterator over such a file. There are multiple
+ * possible options what the {@link VCFSampler} does with the read {@link VariantContext}s.
+ * <p>
+ * <dl>
+ * <dt>Filter</dt>
+ * <dd>Variants can be filtered using multiple {@link IFilter}. Completely removed variants where not finally passed
+ * into the iterator.</dd>
+ * <dt>Sample selection</dt>
+ * <dd>If a multi-VCF file is used there is the possibility to select one sample out of it. It can be done randomly by
+ * running the VCFRandomSampleSelecter or you can predefine a sample name. The sample name must be present in the VCF
+ * header.</dd>
+ * <dt>Variant generation using Hardy-Weinberg principle</dt>
+ * <dd>If allele frequencies are present in the pares VCF they can be used to generate a completely new artificial
+ * {@link Genotype} by using the Hardy-Weinberg principle. Direct allele frequencies can be used of the allele count
+ * divided by the number of total alleles.</dd> *
+ * <dt>Interval list</dt>
+ * <dd>If an {@link IntervalList} is present only variants of that lists will be pares by the {@link VCFFileReader} and
+ * these variants are only used by the {@link VCFSampler}.</dd>
+ * <dt>De-novo generation</dt>
+ * <dd>Inventing new variations. This function is not implemented yet.</dd>
+ * </dl>
+ * 
  * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
 public class VCFSampler implements CloseableIterator<VariantContext> {
 
+	/**
+	 * The probability to select a variant. If set to 1 all variants will be selected.
+	 */
 	private double probability;
+	/**
+	 * 
+	 */
 	private List<Integer> selectAlleles;
+	/**
+	 * The maximum number of variants that should be selected by the sampler. If set to smaller than 1 this option is of
+	 * and there will be no maximum limit used.
+	 */
 	private int variantsAmount;
 	private int position = -1;
+	/**
+	 * The identifier of the allele frequency in the Info column.
+	 */
 	private String afIdentifier;
+	/**
+	 * The identifier of the alt allele counts in the Info column.
+	 */
 	private String acIdentifier;
+	/**
+	 * The identifier of the total number of alleles.
+	 */
 	private String anIdentifier;
+	/**
+	 * If set the genotypes of this samples are selected. if null no sample is selected.
+	 */
 	private String sample;
+	/**
+	 * The VCF file reader.
+	 */
 	private VCFFileReader reader;
+
+	/**
+	 * The variant iterator defined by the reader and maybe by intervals.
+	 */
 	private CloseableIterator<VariantContext> iterator;
+	/**
+	 * The next variantContext. If this is null there will be no further variant and {@link #hasNext()} is false.
+	 */
 	private VariantContext next;
 	private Random random;
 	private DeNovoSampler deNovoGenerator;
@@ -59,9 +113,37 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	private IntervalList intervals;
 	private int intervalPosition = 0;
 
+	/**
+	 * Default constructor initializing all fields. Can only be used by the {@link Builder}.
+	 * 
+	 * @param reader
+	 *            {@link #probability}
+	 * @param probability
+	 *            {@link #probability}
+	 * @param sample
+	 *            {@link #sample}
+	 * @param variantsAmount
+	 *            {@link #variantsAmount}
+	 * @param afIdentifier
+	 *            {@link #afIdentifier}
+	 * @param acIdentifier
+	 *            {@link #acIdentifier}
+	 * @param anIdentifier
+	 *            {@link #anIdentifier}
+	 * @param filters
+	 *            {@link #filters}
+	 * @param intervals
+	 *            {@link #intervals}
+	 * @param deNovoSampler
+	 *            {@link #deNovoGenerator}
+	 * @param selectAlleles
+	 *            {@link #selectAlleles}
+	 * @param random
+	 *            {@link #random}
+	 */
 	private VCFSampler(VCFFileReader reader, double probability, String sample, int variantsAmount, String afIdentifier,
 			String acIdentifier, String anIdentifier, ImmutableSet<IFilter> filters, IntervalList intervals,
-			DeNovoSampler deNovoSampler, List<Integer> selectAlleles) {
+			DeNovoSampler deNovoSampler, List<Integer> selectAlleles, Random random) {
 		this.reader = reader;
 		this.probability = probability;
 		this.sample = sample;
@@ -73,6 +155,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		this.intervals = intervals;
 		this.selectAlleles = selectAlleles;
 		this.deNovoGenerator = deNovoSampler;
+		this.random = random;
 		this.next = getNextVariant();
 	}
 
@@ -89,6 +172,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		private ImmutableSet<IFilter> filters = ImmutableSet.<IFilter> builder().build();
 		IntervalList intervals = new IntervalList(new SAMFileHeader());
 		DeNovoSampler deNovoSampler;
+		private long seed;
+		private boolean useSeed = false;
 
 		public Builder() {
 		}
@@ -151,7 +236,12 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		public Builder filters(ImmutableSet<IFilter> filters) {
 			this.filters = filters;
 			return this;
+		}
 
+		public Builder seed(long seed) {
+			this.seed = seed;
+			this.useSeed = true;
+			return this;
 		}
 
 		public VCFSampler build() {
@@ -172,8 +262,15 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(reader.iterator(), filters);
 				setCounts(counter.getCounts());
 			}
+
+			Random random;
+			if (useSeed)
+				random = new Random(seed);
+			else
+				random = new Random();
+
 			return new VCFSampler(reader, probability, sample, variantsAmount, afIdentifier, acIdentifier, anIdentifier,
-					filters, intervals, deNovoSampler, selectAlleles);
+					filters, intervals, deNovoSampler, selectAlleles, random);
 		}
 
 		private void setCounts(int counts) {
@@ -405,8 +502,6 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	}
 
 	private double nextDouble() {
-		if (random == null)
-			random = new Random();
 		return random.nextDouble();
 	}
 
