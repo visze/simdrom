@@ -22,7 +22,6 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.util.CloseableIterator;
 import htsjdk.samtools.util.Interval;
 import htsjdk.samtools.util.IntervalList;
-import htsjdk.samtools.util.RuntimeEOFException;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
@@ -106,11 +105,27 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 * The next variantContext. If this is null there will be no further variant and {@link #hasNext()} is false.
 	 */
 	private VariantContext next;
+	/**
+	 * Random number generator. Used if probabilities to choose a variant are smaller than 1.0
+	 */
 	private Random random;
+	/**
+	 * De novo generator TODO not used
+	 */
 	private DeNovoSampler deNovoGenerator;
+	/**
+	 * Set of filters that will be used for each {@link VariantContext} read by the {@link #reader}
+	 */
 	private ImmutableSet<IFilter> filters;
-	// intervals
+	/**
+	 * If list is set (not null) for each interval the {@link #reader} is queried using the intervals and only such
+	 * variants are parsed
+	 */
 	private IntervalList intervals;
+	/**
+	 * Points to the actual interval in the interval list. If larger than {@link IntervalList#size()} then variants from
+	 * all intervals are parsed.
+	 */
 	private int intervalPosition = 0;
 
 	/**
@@ -159,96 +174,224 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		this.next = getNextVariant();
 	}
 
+	/**
+	 * 
+	 * Builder class of the {@link VCFSampler}. Checks if everything is set correctly before building. The reader have
+	 * to be set by using {@link #vcfReader(VCFFileReader)}.
+	 * 
+	 * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
+	 *
+	 */
 	public static final class Builder {
 
+		/**
+		 * See {@link VCFSampler#reader}
+		 */
 		private VCFFileReader reader;
+		/**
+		 * See {@link VCFSampler#probability}
+		 */
 		private double probability = 1.0;
 		private List<Integer> selectAlleles;
+		/**
+		 * See {@link VCFSampler#sample}
+		 */
 		private String sample = null;
+		/**
+		 * See {@link VCFSampler#variantsAmount}
+		 */
 		private int variantsAmount = 0;
+		/**
+		 * {@link VCFSampler#afIdentifier}
+		 */
 		private String afIdentifier = null;
+		/**
+		 * {@link VCFSampler#acIdentifier}
+		 */
 		private String acIdentifier = null;
+		/**
+		 * {@link VCFSampler#anIdentifier}
+		 */
 		private String anIdentifier = null;
+		/**
+		 * {@link VCFSampler#filters}
+		 */
 		private ImmutableSet<IFilter> filters = ImmutableSet.<IFilter> builder().build();
+		/**
+		 * {@link VCFSampler#intervals}
+		 */
 		IntervalList intervals = new IntervalList(new SAMFileHeader());
+		/**
+		 * {@link VCFSampler#deNovoGenerator}
+		 */
 		DeNovoSampler deNovoSampler;
+		/**
+		 * The seed to set the {@link Random} number generator for {@link VCFSampler#random}
+		 */
 		private long seed;
+		/**
+		 * If <code>true</code> {@link Random} is initialized with the given seed. Otherwise the default {@link Random}
+		 * constructor is used.
+		 */
 		private boolean useSeed = false;
 
+		/**
+		 * Builder constructor. Please set at least the {@link #reader} using {@link #vcfReader(VCFFileReader)}.
+		 * {@link VCFSampler} can be build running {@link #build()}.
+		 */
 		public Builder() {
 		}
 
+		/**
+		 * Create the {@link VCFFileReader} using the path to the file
+		 * 
+		 * @param path
+		 *            The file path to the vcf (bgzip and indexed)
+		 * @return The builder with a created {@link #reader}.
+		 */
 		public Builder file(String path) {
 			this.reader = new VCFFileReader(new File(path));
 			return this;
 		}
 
+		/**
+		 * Create the {@link VCFFileReader} using a {@link File}.
+		 * 
+		 * @param file
+		 *            The VCF file (bgzip and indexed)
+		 * @return The builder with a created {@link #reader}.
+		 */
 		public Builder file(File file) {
 			this.reader = new VCFFileReader(file);
 			return this;
 		}
 
+		/**
+		 * Set the {@link VCFFileReader}
+		 * 
+		 * @param reader
+		 *            The file of the vcf file
+		 * @return The builder with the initialized {link #reader}.
+		 */
 		public Builder vcfReader(VCFFileReader reader) {
 			this.reader = reader;
 			return this;
 		}
 
+		/**
+		 * @param probability
+		 *            The probability to select a variant. If set to 1 all variants will be selected.
+		 * @return The builder with the initialized {@link #probability}
+		 */
 		public Builder probability(double probability) {
 			this.probability = probability;
 			return this;
 		}
 
+		/**
+		 * @param sample
+		 *            If set the genotypes of this samples are selected. if null no sample is selected.
+		 * 
+		 * @return The builder with the initialized {@link #sample}
+		 */
 		public Builder sample(String sample) {
 			this.sample = sample;
 			return this;
 		}
 
+		/**
+		 * @param afIdentifier
+		 *            The identifier of the allele frequency in the Info column.
+		 * @return The builder with the initialized {@link #afIdentifier}
+		 */
 		public Builder afIdentifier(String afIdentifier) {
 			this.afIdentifier = afIdentifier;
 			return this;
 		}
 
+		/**
+		 * @param acIdentifier
+		 *            The identifier of the alt allele counts in the Info column.
+		 * @return The builder with the initialized {@link #acIdentifier}
+		 */
 		public Builder acIdentifier(String acIdentifier) {
 			this.acIdentifier = acIdentifier;
 			return this;
 		}
 
+		/**
+		 * @param anIdentifier
+		 *            The identifier of the total number of alleles.
+		 * @return The builder with the initialized {@link #anIdentifier}
+		 */
 		public Builder anIdentifier(String anIdentifier) {
 			this.anIdentifier = anIdentifier;
 			return this;
 		}
 
+		/**
+		 * @param variantsAmount
+		 *            The maximum number of variants that should be selected by the sampler. If set to smaller than 1
+		 *            this option is of and there will be no maximum limit used.
+		 * @return The builder with the initialized {@link #variantsAmount}
+		 */
 		public Builder variantsAmount(int variantsAmount) {
 			this.variantsAmount = variantsAmount;
 			return this;
 		}
 
+		/**
+		 * @param intervalsFor
+		 *            each interval the {@link #reader} is queried using the intervals and only such variants are parsed
+		 * @return The builder with the initialized {@link #intervals}
+		 */
 		public Builder intervals(IntervalList intervals) {
 			this.intervals = intervals.uniqued().sorted();
 			return this;
 		}
 
+		/**
+		 * @param deNovoSampler
+		 * @return The builder with the initialized {@link #deNovoSampler}
+		 */
 		public Builder deNovoGenerator(DeNovoSampler deNovoSampler) {
 			this.deNovoSampler = deNovoSampler;
 			return this;
 		}
 
+		/**
+		 * @param filters
+		 *            Set of filters that will be used for each {@link VariantContext} read by the
+		 *            {@link VCFFileReader#reader}
+		 * @return The builder with the initialized {@link #filters}
+		 */
 		public Builder filters(ImmutableSet<IFilter> filters) {
 			this.filters = filters;
 			return this;
 		}
 
+		/**
+		 * @param seed
+		 *            The seed to set the {@link Random} number generator for {@link VCFSampler#random}
+		 * @return The builder with the initialized {@link #seed}
+		 */
 		public Builder seed(long seed) {
 			this.seed = seed;
 			this.useSeed = true;
 			return this;
 		}
 
+		/**
+		 * Build the {@link VCFSampler}. Important: the {@link #reader} have to be initialized using
+		 * {@link #file(File)}, {@link #file(String)} or {@link #vcfReader(VCFFileReader)}.
+		 * 
+		 * @return The created {@link VCFSampler}.
+		 */
 		public VCFSampler build() {
 
 			// returns null if the reader is not set (not useful)
 			if (reader == null)
-				throw new RuntimeEOFException("No variants are set for the sampler: The reader cannot be null");
+				throw new RuntimeException("No variants are set for the sampler: The reader cannot be null");
 
 			// do not use it if one of them is not set!
 			if (acIdentifier == null || anIdentifier == null) {
@@ -259,7 +402,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 			if (variantsAmount < 0)
 				variantsAmount = 0;
 			else if (variantsAmount > 0) {
-				VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(reader.iterator(), filters);
+				VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(reader.iterator(), filters,
+						sample);
 				setCounts(counter.getCounts());
 			}
 
