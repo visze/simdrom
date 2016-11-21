@@ -1,27 +1,24 @@
 package de.charite.compbio.simdrom.filter;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.CommonInfo;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.VariantContextBuilder;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * In implementation to use the VCF-Info column with a key {@link #info} and a
- * value {@link #type} to filter out variants that do not match to key=value.
+ * In implementation to use the VCF-Info column with a key {@link #info} and a value {@link #type} to filter out
+ * variants that do not match to key=value.
  * 
  * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
-public class InfoFieldFilter implements IFilter {
+public class InfoFieldFilter extends AFilter {
 
-	/**
-	 * Filter type
-	 */
-	private final FilterType filterType = FilterType.INFO_FIELD_FILTER;
 	/**
 	 * key in INFO column
 	 */
@@ -32,6 +29,7 @@ public class InfoFieldFilter implements IFilter {
 	private Object type;
 
 	public InfoFieldFilter(String info, Object type) {
+		super(FilterType.INFO_FIELD_FILTER);
 		this.info = info;
 		this.type = type;
 	}
@@ -39,25 +37,27 @@ public class InfoFieldFilter implements IFilter {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see de.charite.compbio.simdrom.filter.IFilter#filter(htsjdk.variant.
-	 * variantcontext.VariantContext)
+	 * @see de.charite.compbio.simdrom.filter.IFilter#filter(htsjdk.variant. variantcontext.VariantContext)
 	 */
 	@Override
-	public VariantContext filter(VariantContext vc) {
-		CommonInfo infoField = vc.getCommonInfo();
-		if (infoField.hasAttribute(info)) {
-			Object val = infoField.getAttribute(info);
-			if (val.getClass().isArray())
-				return getVariantContextFromArray(vc, val);
-			else if (val instanceof List)
-				return getVariantContextFromArray(vc, ((List<?>) val).toArray());
-			else if (equalInfoType(val, type))
-				return vc;
+	public Optional<VariantContext> filter(Optional<VariantContext> optional_vc) {
+		if (optional_vc.isPresent()) {
+			VariantContext vc = optional_vc.get();
+			CommonInfo infoField = vc.getCommonInfo();
+			if (infoField.hasAttribute(info)) {
+				Object val = infoField.getAttribute(info);
+				if (val.getClass().isArray())
+					return getVariantContextFromArray(vc, val);
+				else if (val instanceof List)
+					return getVariantContextFromArray(vc, ((List<?>) val).toArray());
+				else if (equalInfoType(val, type))
+					return optional_vc;
+			}
 		}
-		return null;
+		return optional_vc;
 	}
 
-	private VariantContext getVariantContextFromArray(VariantContext vc, Object infoField) {
+	private Optional<VariantContext> getVariantContextFromArray(VariantContext vc, Object infoField) {
 
 		final int length = Array.getLength(infoField);
 
@@ -72,13 +72,13 @@ public class InfoFieldFilter implements IFilter {
 			}
 			// no allele matches, return null
 			if (alleles.size() <= 1)
-				return null;
+				return Optional.empty();
 			else
-				return new VariantContextBuilder(vc).alleles(alleles).make();
+				return Optional.of(new VariantContextBuilder(vc).alleles(alleles).make());
 		} else { // hack, no we add if one allele matches it.
 			for (int i = 0; i < length; i++) {
 				if (equalInfoType(type, Array.get(infoField, i)))
-					return vc;
+					return Optional.of(vc);
 			}
 		}
 		return null;
@@ -89,8 +89,4 @@ public class InfoFieldFilter implements IFilter {
 		return attribute.toString().equals(infoType.toString());
 	}
 
-	@Override
-	public FilterType getFilterType() {
-		return this.filterType;
-	}
 }

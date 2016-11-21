@@ -1,5 +1,7 @@
 package de.charite.compbio.simdrom.filter;
 
+import java.util.Optional;
+
 import htsjdk.variant.variantcontext.VariantContext;
 
 /**
@@ -25,6 +27,8 @@ public interface IFilter {
 	 * @return <code>null</code>, maybe party filtered or (if passed) the old
 	 *         variant.
 	 */
-	public VariantContext filter(VariantContext vc);
+	public Optional<VariantContext> filter(VariantContext vc);
+	
+	public Optional<VariantContext> filter(Optional<VariantContext> vc);
 
 }

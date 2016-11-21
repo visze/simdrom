@@ -4,6 +4,7 @@
 package de.charite.compbio.simdrom.sampler.vcf;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
@@ -44,11 +45,12 @@ public class VCFAlternativeAlleleCounter {
 	private void count() {
 		counts = 0;
 		while (iterator.hasNext()) {
-			VariantContext vc = iterator.next();
+			Optional<VariantContext> optional_vc = Optional.of( iterator.next());
 			for (IFilter iFilter : filters) {
-				vc = iFilter.filter(vc);
+				optional_vc = iFilter.filter(optional_vc);
 			}
-			if (vc != null) {
+			if (optional_vc.isPresent()) {
+				VariantContext vc = optional_vc.get();
 				if (sample != null) {
 					Set<Allele> alleleSet = new HashSet<>();
 					alleleSet.addAll(vc.getGenotype(sample).getAlleles());

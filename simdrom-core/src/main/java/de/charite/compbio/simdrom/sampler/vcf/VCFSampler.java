@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
@@ -112,6 +113,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	/**
 	 * De novo generator TODO not used
 	 */
+	@SuppressWarnings("unused")
 	private DeNovoSampler deNovoGenerator;
 	/**
 	 * Set of filters that will be used for each {@link VariantContext} read by the {@link #reader}
@@ -171,7 +173,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		this.selectAlleles = selectAlleles;
 		this.deNovoGenerator = deNovoSampler;
 		this.random = random;
-		this.next = getNextVariant();
+		next();
 	}
 
 	/**
@@ -341,8 +343,9 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		}
 
 		/**
-		 * @param intervalsFor
-		 *            each interval the {@link #reader} is queried using the intervals and only such variants are parsed
+		 * @param intervals
+		 *            For each interval the {@link #reader} is queried using the intervals and only such variants are
+		 *            parsed
 		 * @return The builder with the initialized {@link #intervals}
 		 */
 		public Builder intervals(IntervalList intervals) {
@@ -432,7 +435,14 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 	}
 
-	public CloseableIterator<VariantContext> getIterator() {
+	/**
+	 * Returns the iterator. If {@link #iterator} is <code>null</code> then the iterator of the {@link #reader} ill be
+	 * set. But if intervals are used is generates with {@link #getNextIntervalInterator()} the iterator querying the
+	 * next interval.
+	 * 
+	 * @return The actual VCF file iterator.
+	 */
+	private CloseableIterator<VariantContext> getIterator() {
 
 		if (this.iterator == null) {
 			if (useIntervals())
@@ -492,7 +502,11 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	@Override
 	public VariantContext next() {
 		VariantContext actual = next;
-		next = getNextVariant();
+		Optional<VariantContext> vc = getNextVariant();
+		if (vc.isPresent())
+			next = vc.get();
+		else
+			next = null;
 		return actual;
 	}
 
@@ -501,22 +515,23 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		throw new UnsupportedOperationException();
 	}
 
-	private VariantContext getNextVariant() {
-		VariantContext output = null;
-		while (checkForNext() && output == null) {
+	private Optional<VariantContext> getNextVariant() {
+		Optional<VariantContext> output = Optional.empty();
+		while (checkForNext() && !output.isPresent()) {
 			// get next line
 			VariantContext candidate = getIterator().next();
 
 			// filter
-			candidate = filter(candidate);
-			if (candidate == null)
+			Optional<VariantContext> optional_candidate = filter(candidate);
+			if (optional_candidate.isPresent())
 				continue;
+			candidate = optional_candidate.get();
 
 			// get alleles by sampling method
 			Map<Integer, Boolean> alleles = useAlleles(candidate);
 			if (!alleles.isEmpty()) {
 				output = createVariantContextWithGenotype(candidate, alleles);
-				if (output == null)
+				if (!output.isPresent())
 					continue;
 				break;
 			}
@@ -524,26 +539,37 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		return output;
 	}
 
-	private VariantContext filter(VariantContext candidate) {
+	/**
+	 * Applies all filters to the input variant.
+	 * 
+	 * @param candidate
+	 *            Variant to filter
+	 * @return The filtered {@link VariantContext}, or <code>null</code>
+	 */
+	private Optional<VariantContext> filter(VariantContext candidate) {
+		Optional<VariantContext> optional_vc = Optional.of(candidate);
 		for (IFilter iFilter : getFilters()) {
-			candidate = iFilter.filter(candidate);
+			optional_vc = iFilter.filter(optional_vc);
 		}
-		return candidate;
+		return optional_vc;
 	}
 
-	private VariantContext createVariantContextWithGenotype(VariantContext candidate, Map<Integer, Boolean> alleles) {
+	private Optional<VariantContext> createVariantContextWithGenotype(VariantContext candidate,
+			Map<Integer, Boolean> alleles) {
 		if (useSample()) {
 			Genotype genotype = candidate.getGenotype(getSample());
 			if (!genotype.isHomRef())
-				return new VariantContextBuilder(candidate).genotypes(candidate.getGenotypes(getSample())).make();
+				return Optional
+						.of(new VariantContextBuilder(candidate).genotypes(candidate.getGenotypes(getSample())).make());
 			else
-				return null;
+				return Optional.empty();
 		} else {
-			return new VariantContextBuilder(candidate).genotypes(createGenotype(candidate.getAlleles(), alleles))
-					.make();
+			return Optional.of(new VariantContextBuilder(candidate)
+					.genotypes(createGenotype(candidate.getAlleles(), alleles)).make());
 		}
 	}
 
+	@SuppressWarnings("unused")
 	private Collection<Allele> getAlleles(VariantContext candidate, Set<Integer> posOfAllele) {
 		Collection<Allele> alleles = new ArrayList<Allele>();
 		alleles.add(candidate.getReference());
@@ -649,6 +675,11 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		return random.nextDouble();
 	}
 
+	/**
+	 * Getter of the {@link #sample}. Can be null.
+	 * 
+	 * @return The set sample, or null
+	 */
 	public String getSample() {
 		return sample;
 	}
