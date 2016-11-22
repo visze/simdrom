@@ -31,7 +31,11 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 		this(backgroundSampler, Optional.empty(), log);
 	}
 
-	public SpikeIn(VCFSampler backgroundSampler, Optional<VCFSampler> mutationSampler, boolean log) {
+	public SpikeIn(VCFSampler backgroundSampler, VCFSampler mutationSampler, boolean log) {
+		this(backgroundSampler, Optional.of(mutationSampler), log);
+	}
+	
+	private SpikeIn(VCFSampler backgroundSampler, Optional<VCFSampler> mutationSampler, boolean log) {
 		super();
 		this.backgroundSampler = backgroundSampler;
 		this.mutationSampler = mutationSampler;
