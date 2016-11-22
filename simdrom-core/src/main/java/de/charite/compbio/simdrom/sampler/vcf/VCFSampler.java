@@ -64,6 +64,10 @@ import htsjdk.variant.vcf.VCFHeaderLineType;
 public class VCFSampler implements CloseableIterator<VariantContext> {
 
 	/**
+	 * The default sample name for genotypes in the VCF.
+	 */
+	public static final String DEFAULT_SAMPLE_NAME = "Sampled";
+	/**
 	 * The probability to select a variant. If set to 1 all variants will be selected.
 	 */
 	private double probability;
@@ -90,9 +94,9 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 */
 	private String anIdentifier;
 	/**
-	 * If set the genotypes of this samples are selected. if null no sample is selected.
+	 * If set the genotypes of this samples are selected.
 	 */
-	private String sample;
+	private Optional<String> sample;
 	/**
 	 * The VCF file reader.
 	 */
@@ -158,9 +162,9 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 * @param random
 	 *            {@link #random}
 	 */
-	private VCFSampler(VCFFileReader reader, double probability, String sample, int variantsAmount, String afIdentifier,
-			String acIdentifier, String anIdentifier, ImmutableSet<IFilter> filters, IntervalList intervals,
-			DeNovoSampler deNovoSampler, List<Integer> selectAlleles, Random random) {
+	private VCFSampler(VCFFileReader reader, double probability, Optional<String> sample, int variantsAmount,
+			String afIdentifier, String acIdentifier, String anIdentifier, ImmutableSet<IFilter> filters,
+			IntervalList intervals, DeNovoSampler deNovoSampler, List<Integer> selectAlleles, Random random) {
 		this.reader = reader;
 		this.probability = probability;
 		this.sample = sample;
@@ -198,7 +202,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		/**
 		 * See {@link VCFSampler#sample}
 		 */
-		private String sample = null;
+		private Optional<String> sample = Optional.empty();
 		/**
 		 * See {@link VCFSampler#variantsAmount}
 		 */
@@ -297,7 +301,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		 * @return The builder with the initialized {@link #sample}
 		 */
 		public Builder sample(String sample) {
-			this.sample = sample;
+			this.sample = Optional.of(sample);
 			return this;
 		}
 
@@ -556,11 +560,11 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 	private Optional<VariantContext> createVariantContextWithGenotype(VariantContext candidate,
 			Map<Integer, Boolean> alleles) {
-		if (useSample()) {
-			Genotype genotype = candidate.getGenotype(getSample());
+		if (sample.isPresent()) {
+			Genotype genotype = candidate.getGenotype(sample.get());
 			if (!genotype.isHomRef())
-				return Optional
-						.of(new VariantContextBuilder(candidate).genotypes(candidate.getGenotypes(getSample())).make());
+				return Optional.of(
+						new VariantContextBuilder(candidate).genotypes(candidate.getGenotypes(sample.get())).make());
 			else
 				return Optional.empty();
 		} else {
@@ -598,7 +602,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 		}
 
-		return GenotypeBuilder.create("Sampled", filteredAlleles);
+		return GenotypeBuilder.create(DEFAULT_SAMPLE_NAME, filteredAlleles);
 	}
 
 	private Map<Integer, Boolean> useAlleles(VariantContext candidate) {
@@ -680,7 +684,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 * 
 	 * @return The set sample, or null
 	 */
-	public String getSample() {
+	public Optional<String> getSample() {
 		return sample;
 	}
 
@@ -688,18 +692,22 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		return probability;
 	}
 
-	public VCFHeader getFileHeader() {
-
+	public VCFHeader getVCFHeader() {
 		Set<VCFHeaderLine> set = new LinkedHashSet<VCFHeaderLine>();
 		set.addAll(reader.getFileHeader().getMetaDataInInputOrder());
 		set.add(new VCFFormatHeaderLine("GT", 1, VCFHeaderLineType.String, "Genotype"));
 		return new VCFHeader(set, getSampleNames());
 	}
 
+	/**
+	 * Get the sample name stored in {@link #sample} of the new samples.
+	 * 
+	 * @return The sample name. if no name is set the default name is {@link VCFSampler#DEFAULT_SAMPLE_NAME}.
+	 */
 	public ImmutableSet<String> getSampleNames() {
-		if (getSample() == null)
-			return ImmutableSet.<String> builder().add("Sampled").build();
-		return ImmutableSet.<String> builder().add(getSample()).build();
+		if (!getSample().isPresent())
+			return ImmutableSet.<String> builder().add(DEFAULT_SAMPLE_NAME).build();
+		return ImmutableSet.<String> builder().add(getSample().get()).build();
 	}
 
 	public int getVariantsAmount() {
@@ -712,10 +720,6 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 	private boolean useAF() {
 		return getAFIdentifier() != null;
-	}
-
-	private boolean useSample() {
-		return getSample() != null;
 	}
 
 	public void close() {

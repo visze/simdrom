@@ -22,11 +22,11 @@ public class VCFAlternativeAlleleCounter {
 
 	private CloseableIterator<VariantContext> iterator;
 	private ImmutableSet<IFilter> filters;
-	private String sample;
+	private Optional<String> sample;
 	private int counts = -1;
 
 	public VCFAlternativeAlleleCounter(CloseableIterator<VariantContext> iterator, ImmutableSet<IFilter> filters,
-			String sample) {
+			Optional<String> sample) {
 		this.iterator = iterator;
 		this.filters = filters;
 		this.sample = sample;
@@ -45,15 +45,15 @@ public class VCFAlternativeAlleleCounter {
 	private void count() {
 		counts = 0;
 		while (iterator.hasNext()) {
-			Optional<VariantContext> optional_vc = Optional.of( iterator.next());
+			Optional<VariantContext> optional_vc = Optional.of(iterator.next());
 			for (IFilter iFilter : filters) {
 				optional_vc = iFilter.filter(optional_vc);
 			}
 			if (optional_vc.isPresent()) {
 				VariantContext vc = optional_vc.get();
-				if (sample != null) {
+				if (sample.isPresent()) {
 					Set<Allele> alleleSet = new HashSet<>();
-					alleleSet.addAll(vc.getGenotype(sample).getAlleles());
+					alleleSet.addAll(vc.getGenotype(sample.get()).getAlleles());
 					for (Allele allele : alleleSet) {
 						if (allele.isNonReference())
 							counts += 1;

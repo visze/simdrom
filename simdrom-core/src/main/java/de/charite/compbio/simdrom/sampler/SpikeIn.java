@@ -2,10 +2,12 @@ package de.charite.compbio.simdrom.sampler;
 
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
 import htsjdk.samtools.util.CloseableIterator;
+import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.VariantContextBuilder;
@@ -17,46 +19,67 @@ import htsjdk.variant.vcf.VCFInfoHeaderLine;
 public class SpikeIn implements CloseableIterator<VariantContext> {
 
 	private VCFSampler backgroundSampler;
-	private VCFSampler mutationSampler;
+	private Optional<VCFSampler> mutationSampler;
 
-	private VariantContext backgroundVC = null;
-	private VariantContext mutationsVC = null;
+	private Optional<VariantContext> backgroundVC;
+	private Optional<VariantContext> mutationsVC;
+
 	private boolean log;
 	private Set<VariantContext> vcLogs;
 
 	public SpikeIn(VCFSampler backgroundSampler, boolean log) {
-		this(backgroundSampler, null, log);
+		this(backgroundSampler, Optional.empty(), log);
 	}
 
-	public SpikeIn(VCFSampler backgroundSampler, VCFSampler mutationSampler, boolean log) {
+	public SpikeIn(VCFSampler backgroundSampler, Optional<VCFSampler> mutationSampler, boolean log) {
 		super();
 		this.backgroundSampler = backgroundSampler;
 		this.mutationSampler = mutationSampler;
 		this.log = log;
 
-		if (backgroundSampler.hasNext())
-			backgroundVC = backgroundSampler.next();
-		if ((mutationSampler != null && mutationSampler.hasNext())) {
-			mutationsVC = mutationSampler.next();
-			// FIXME make it nicer!
-			if (mutationsVC != null)
-				mutationsVC = new VariantContextBuilder(mutationsVC)
-						.genotypes(
-								GenotypeBuilder.create(backgroundSampler.getSample(),
-										(mutationSampler.getSample() == null ? mutationsVC.getAlleles()
-												: mutationsVC.getGenotype(mutationSampler.getSample()).getAlleles())))
-						.make();
+		this.backgroundVC = getNextBackground();
+		this.mutationsVC = getNextMutation();
+	}
+
+	/**
+	 * 
+	 */
+	private Optional<VariantContext> getNextMutation() {
+		if ((this.mutationSampler.isPresent() && this.mutationSampler.get().hasNext())) {
+			VariantContext mutationsVC = this.mutationSampler.get().next();
+			if (mutationsVC != null) {
+				String sample = VCFSampler.DEFAULT_SAMPLE_NAME;
+				if (this.backgroundSampler.getSample().isPresent())
+					sample = this.backgroundSampler.getSample().get();
+				Genotype genotype = GenotypeBuilder.create(sample,
+						(this.mutationSampler.get().getSample().isPresent()
+								? mutationsVC.getGenotype(this.mutationSampler.get().getSample().get()).getAlleles()
+								: mutationsVC.getAlleles()));
+				mutationsVC = new VariantContextBuilder(mutationsVC).genotypes(genotype).make();
+			}
+			return Optional.of(mutationsVC);
 		}
+		return Optional.empty();
+	}
+
+	/**
+	 * @return
+	 */
+	private Optional<VariantContext> getNextBackground() {
+		if (this.backgroundSampler.hasNext())
+			return Optional.of(this.backgroundSampler.next());
+		else
+			return Optional.empty();
 	}
 
 	public VCFHeader getVCFHeader() {
 		Set<VCFHeaderLine> metaData = new LinkedHashSet<VCFHeaderLine>();
-		metaData.addAll(backgroundSampler.getFileHeader().getMetaDataInInputOrder());
+		metaData.addAll(backgroundSampler.getVCFHeader().getMetaDataInInputOrder());
 		// FIXME workaround for ExAC and 1000 genome data
 		metaData.add(new VCFInfoHeaderLine("OLD_VARIANT", 1, VCFHeaderLineType.String,
 				"Flag in 1000 genomes that is not set in the header"));
-		if (mutationSampler != null) {
-			metaData.addAll(mutationSampler.getFileHeader().getMetaDataInInputOrder());
+		if (mutationSampler.isPresent()) {
+			metaData.addAll(mutationSampler.get().getVCFHeader().getMetaDataInInputOrder());
 
 		}
 		return new VCFHeader(metaData, backgroundSampler.getSampleNames());
@@ -64,7 +87,7 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 
 	@Override
 	public boolean hasNext() {
-		return (backgroundVC != null || mutationsVC != null);
+		return (backgroundVC.isPresent() || mutationsVC.isPresent());
 	}
 
 	@Override
@@ -79,39 +102,29 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 
 	private VariantContext getNextVariantContext() {
 		VariantContext output = null;
-		boolean backgroundSelection = true;
-		if (backgroundVC != null || mutationsVC != null) {
+		boolean mutationSelection = false;
+		if (backgroundVC.isPresent() && mutationsVC.isPresent()) {
+			if (backgroundVC.get().getContig().equals(mutationsVC.get().getContig())) {
+				if (backgroundVC.get().getStart() <= mutationsVC.get().getStart()) {
+					output = backgroundVC.get();
+					mutationSelection = true;
+				} else
+					output = mutationsVC.get();
+			} else
+				output = backgroundVC.get();
 
-			if (mutationsVC == null)
-				output = backgroundVC;
-			else if (backgroundVC == null) {
-				output = mutationsVC;
-				backgroundSelection = false;
-			} else if (backgroundVC.getContig().equals(mutationsVC.getContig())) {
-				if (backgroundVC.getStart() <= mutationsVC.getStart())
-					output = backgroundVC;
-				else {
-					output = mutationsVC;
-					backgroundSelection = false;
-				}
-			} else {
-				output = backgroundVC;
-			}
+		} else if (mutationsVC.isPresent()) {
+			output = mutationsVC.get();
+			mutationSelection = true;
+		} else if (backgroundVC.isPresent())
+			output = backgroundVC.get();
 
-			if (backgroundSelection)
-				backgroundVC = backgroundSampler.next();
-			else {
-				mutationsVC = mutationSampler.next();
-				// FIXME make it nicer!
-				if (mutationsVC != null)
-					mutationsVC = new VariantContextBuilder(mutationsVC)
-							.genotypes(GenotypeBuilder.create(backgroundSampler.getSample(),
-									mutationsVC.getGenotype(mutationSampler.getSample()).getAlleles()))
-							.make();
-			}
-		}
-		if (!backgroundSelection)
+		if (mutationSelection) {
+			mutationsVC = getNextMutation();
 			addLog(output);
+		} else
+			backgroundVC = getNextBackground();
+
 		return output;
 	}
 
@@ -120,10 +133,16 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 			getVcLogs().add(output);
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see htsjdk.samtools.util.CloseableIterator#close()
+	 */
+	@Override
 	public void close() {
 		backgroundSampler.close();
-		if (mutationSampler != null)
-			mutationSampler.close();
+		if (mutationSampler.isPresent())
+			mutationSampler.get().close();
 	}
 
 	public Set<VariantContext> getVcLogs() {
