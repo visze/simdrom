@@ -16,6 +16,11 @@ public abstract class AFilter implements IFilter {
 	 */
 	private final FilterType filterType;
 
+	/**
+	 * Default constructor.
+	 * 
+	 * @param filterType
+	 */
 	public AFilter(FilterType filterType) {
 		this.filterType = filterType;
 	}
@@ -31,6 +36,9 @@ public abstract class AFilter implements IFilter {
 		return filter(optional_vc);
 	}
 
+	/* (non-Javadoc)
+	 * @see de.charite.compbio.simdrom.filter.IFilter#getFilterType()
+	 */
 	@Override
 	public FilterType getFilterType() {
 		return this.filterType;

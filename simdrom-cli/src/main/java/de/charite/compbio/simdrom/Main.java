@@ -1,6 +1,7 @@
 package de.charite.compbio.simdrom;
 
 import java.io.IOException;
+import java.util.Random;
 
 import org.apache.commons.cli.ParseException;
 
@@ -8,7 +9,7 @@ import de.charite.compbio.simdrom.cli.SIMdromSetting;
 import de.charite.compbio.simdrom.io.writer.VCFTSVWriter;
 import de.charite.compbio.simdrom.sampler.DeNovoSampler;
 import de.charite.compbio.simdrom.sampler.SpikeIn;
-import de.charite.compbio.simdrom.sampler.vcf.VCFRandomSampleSelecter;
+import de.charite.compbio.simdrom.sampler.vcf.VCFSampleSelector;
 import de.charite.compbio.simdrom.sampler.vcf.VCFSampler;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.writer.Options;
@@ -37,11 +38,11 @@ public class Main {
 
 		// select (random) sample if set
 		if (SIMdromSetting.ONLY_ONE_BACKGROUND_SAMPLE) {
-			VCFRandomSampleSelecter selecter;
+			VCFSampleSelector selecter;
 			if (SIMdromSetting.ONLY_ONE_BACKGROUND_SAMPLE_NAME == null)
-				selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF);
+				selecter = new VCFSampleSelector(SIMdromSetting.BACKGROUND_VCF, new Random().nextLong());
 			else
-				selecter = new VCFRandomSampleSelecter(SIMdromSetting.BACKGROUND_VCF,
+				selecter = new VCFSampleSelector(SIMdromSetting.BACKGROUND_VCF,
 						SIMdromSetting.ONLY_ONE_BACKGROUND_SAMPLE_NAME);
 			backgroundSamplerBuilder.sample(selecter.getSample());
 		}
@@ -68,11 +69,11 @@ public class Main {
 
 			// select (random) sample if set
 			if (SIMdromSetting.ONLY_ONE_MUTATIONS_SAMPLE) {
-				VCFRandomSampleSelecter selecter;
+				VCFSampleSelector selecter;
 				if (SIMdromSetting.ONLY_ONE_MUTATIONS_SAMPLE_NAME == null)
-					selecter = new VCFRandomSampleSelecter(SIMdromSetting.MUTATIONS_VCF);
+					selecter = new VCFSampleSelector(SIMdromSetting.MUTATIONS_VCF, new Random().nextLong());
 				else
-					selecter = new VCFRandomSampleSelecter(SIMdromSetting.MUTATIONS_VCF,
+					selecter = new VCFSampleSelector(SIMdromSetting.MUTATIONS_VCF,
 							SIMdromSetting.ONLY_ONE_MUTATIONS_SAMPLE_NAME);
 				mutationSamplerBuilder.sample(selecter.getSample());
 			}

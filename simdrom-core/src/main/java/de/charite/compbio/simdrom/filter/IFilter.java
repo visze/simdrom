@@ -18,17 +18,26 @@ public interface IFilter {
 	public FilterType getFilterType();
 
 	/**
-	 * Filter a variant by using this method. It can remove parts of the
-	 * variant, or remove the variant completely. This returns <code>null</code>
-	 * .
+	 * Filter a variant by using this method. It can remove parts of the variant, or remove the variant completely. Then
+	 * {@link Optional#isPresent()} will be <code>false</code>.
 	 * 
 	 * @param vc
 	 *            variant to filter
-	 * @return <code>null</code>, maybe party filtered or (if passed) the old
-	 *         variant.
+	 * @return An {@link Optional} including the variant. {@link Optional#isPresent()} will be <code>false</code> if the
+	 *         filter removes the variant.
 	 */
 	public Optional<VariantContext> filter(VariantContext vc);
-	
+
+	/**
+	 * Filter a variant (used ins an {@link Optional}) by using this method. It can remove parts of the variant, or
+	 * remove the variant completely. Then {@link Optional#isPresent()} will be <code>false</code>.
+	 * 
+	 * @param vc
+	 *            Variant included in an {@link Optional} to filter. If {@link Optional#isPresent()} <code>false</code>
+	 *            nothing will be done.
+	 * @return An {@link Optional} including the variant. {@link Optional#isPresent()} will be <code>false</code> if the
+	 *         filter removes the variant.
+	 */
 	public Optional<VariantContext> filter(Optional<VariantContext> vc);
 
 }

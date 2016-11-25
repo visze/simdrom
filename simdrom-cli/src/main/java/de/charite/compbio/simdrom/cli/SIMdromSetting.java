@@ -42,11 +42,11 @@ public class SIMdromSetting {
 	/**
 	 * VCF of the background mutation. These mutations are used to sample a new mutation file. Required.
 	 */
-	public static String BACKGROUND_VCF;
+	public static File BACKGROUND_VCF;
 	/**
 	 * If set, mutations of these file are spiked in. Optional.
 	 */
-	public static String MUTATIONS_VCF;
+	public static File MUTATIONS_VCF;
 	/**
 	 * Probability so choose a variant in the {@link SIMdromSetting#BACKGROUND_VCF}.
 	 */
@@ -147,13 +147,13 @@ public class SIMdromSetting {
 		options.addOption(Option.builder("h").longOpt("help").desc("Show this help message").build());
 
 		// background vcf
-		options.addOption(Option.builder("b").longOpt("background-population").hasArg().required()
+		options.addOption(Option.builder("b").longOpt("background-population").hasArg().required().type(File.class)
 				.desc("VCF of the background population. variants will be used to sample a new mutation file.")
 				.build());
 
 		// mutations vcf
-		options.addOption(
-				Option.builder("m").longOpt("mutations").hasArg().desc("Optional. Mutation VCF to spike in.").build());
+		options.addOption(Option.builder("m").longOpt("mutations").hasArg().type(File.class)
+				.desc("Optional. Mutation VCF to spike in.").build());
 
 		// background probability
 		options.addOption(Option.builder().longOpt("background-probability").hasArg()
@@ -174,7 +174,7 @@ public class SIMdromSetting {
 		// only one sample of background
 		options.addOption(Option.builder().longOpt("single-sample-background").hasArg().optionalArg(true)
 				.desc("Default false. If present, a random sample will be chosen of the background VCF (-b).").build());
-		
+
 		// only one sample of mutations
 		options.addOption(Option.builder().longOpt("single-sample-mutations").hasArg().optionalArg(true)
 				.desc("Default false. If present, a random sample will be chosen of the mutations VCF (-m).").build());
@@ -254,9 +254,9 @@ public class SIMdromSetting {
 			checkMissingOption(cmd, "mutations-allele-count", "mutations-alt-allele-count");
 			checkMissingOption(cmd, "de-novo", "reference");
 
-			BACKGROUND_VCF = cmd.getOptionValue("background-population");
+			BACKGROUND_VCF = (File) cmd.getParsedOptionValue("background-population");
 			if (cmd.hasOption("mutations"))
-				MUTATIONS_VCF = cmd.getOptionValue("mutations");
+				MUTATIONS_VCF = (File) cmd.getParsedOptionValue("mutations");
 
 			// probabilities
 			if (cmd.hasOption("background-probability")) {
@@ -338,7 +338,7 @@ public class SIMdromSetting {
 				}
 			}
 			MUTATIONS_FILTERS = ImmutableSet.<IFilter> builder().addAll(filters).build();
-			
+
 			// output
 			if (cmd.hasOption("output")) {
 				OUTPUT = cmd.getOptionValue("output");

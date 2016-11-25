@@ -11,29 +11,50 @@ import java.util.Set;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Sets;
 
-import htsjdk.samtools.util.RuntimeEOFException;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.CommonInfo;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.VariantContextBuilder;
 
 /**
- * In implementation to use the VCF-Info column with a key {@link #info} and a value {@link #type} to filter out
- * variants that do not match to key=value.
+ * An implementation to use the VCF-Info with kex/values provided by the ClinVar file to filter it. It will returns all
+ * Variants and alleles that comes from one of the used databases {@link #clndsbn} (OMIM,MedLine,...) that have one of
+ * the clinical origins in {@link #clnorigin} (somatic, germline,...) and one of the the clinical significance clinical
+ * significances in {@link #clnsig}.
  * 
  * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
 public class ClinVarFilter extends AFilter {
 
-	private Set<Integer> clinsig = Sets.newHashSet(4, 5);
-	private Set<Integer> clinorigin = Sets.newHashSet(1);
+	/**
+	 * All clinical significances that should be used (info field CLNSIG). E.g. 4 and 5 is likely pathogenic and
+	 * pathogenic
+	 */
+	private Set<Integer> clnsig = Sets.newHashSet(4, 5);
+	/**
+	 * The clinical origin (info field CLNORIGIN). E.g. 1 is germline.
+	 */
+	private Set<Integer> clnorigin = Sets.newHashSet(1);
+	/**
+	 * The names in the databases that should be used (info field CLNDSDB). E.g. OMIM
+	 */
 	private Set<String> clndsbn = Sets.newHashSet("OMIM");
 
+	/**
+	 * Default constructor
+	 * 
+	 * @param clinsig
+	 *            Set of clinical significances
+	 * @param clinorigin
+	 *            Set of clinical origins
+	 * @param clndsbn
+	 *            Set of clinical databases.
+	 */
 	public ClinVarFilter(Set<Integer> clinsig, Set<Integer> clinorigin, Set<String> clndsbn) {
 		super(FilterType.CLINVAR_FILTER);
-		this.clinsig = clinsig;
-		this.clinorigin = clinorigin;
+		this.clnsig = clinsig;
+		this.clnorigin = clinorigin;
 		this.clndsbn = clndsbn;
 	}
 
@@ -69,7 +90,7 @@ public class ClinVarFilter extends AFilter {
 					filterArray(vc, sigs_dbs_ids, newAlleles, ((List<?>) sigs).toArray(), ((List<?>) alleles).toArray(),
 							((List<?>) dbs).toArray(), ((List<?>) dbids).toArray(), ((List<?>) origin).toArray());
 				else
-					throw new RuntimeEOFException("OHOOOO");
+					throw new RuntimeException("OHOOOO");
 				// no allele matches, return null
 				if (newAlleles.size() <= 1)
 					return Optional.empty();
@@ -117,7 +138,7 @@ public class ClinVarFilter extends AFilter {
 
 		int origin = Integer.parseInt(origins);
 
-		if (allelePerCLNAllele <= 0 || !clinorigin.contains(origin))
+		if (allelePerCLNAllele <= 0 || !clnorigin.contains(origin))
 			return;
 
 		Allele allele = vc.getAlternateAllele(allelePerCLNAllele - 1);
@@ -125,7 +146,7 @@ public class ClinVarFilter extends AFilter {
 		for (int j = 0; j < dbsPerCLNAllele.length; j++) { // significance
 			int sig = Integer.parseInt(sigsPerCLNAllele[j]);
 
-			if (clinsig.contains(sig)) {
+			if (clnsig.contains(sig)) {
 				String[] dbsOfCLNAllele = dbsPerCLNAllele[j].split(":");
 				String[] idsOfCLNAllele = idsPerCLNAllele[j].split(":");
 

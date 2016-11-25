@@ -11,7 +11,7 @@ import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.VariantContextBuilder;
 
 /**
- * In implementation to use the VCF-Info column with a key {@link #info} and a value {@link #type} to filter out
+ * An implementation to use the VCF-Info column with a key {@link #info} and a value {@link #type} to filter out
  * variants that do not match to key=value.
  * 
  * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
@@ -28,6 +28,12 @@ public class InfoFieldFilter extends AFilter {
 	 */
 	private Object type;
 
+	/**
+	 * Default constructor
+	 * 
+	 * @param info The key in INFO column
+	 * @param type Value of the info input in the INFO column
+	 */
 	public InfoFieldFilter(String info, Object type) {
 		super(FilterType.INFO_FIELD_FILTER);
 		this.info = info;
@@ -81,7 +87,7 @@ public class InfoFieldFilter extends AFilter {
 					return Optional.of(vc);
 			}
 		}
-		return null;
+		return Optional.empty();
 
 	}
 
