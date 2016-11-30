@@ -4,9 +4,12 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.CommonInfo;
+import htsjdk.variant.variantcontext.Genotype;
+import htsjdk.variant.variantcontext.GenotypeBuilder;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.VariantContextBuilder;
 
@@ -17,7 +20,7 @@ import htsjdk.variant.variantcontext.VariantContextBuilder;
  * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
  */
-public class InfoFieldFilter extends AFilter {
+public abstract class AInfoFieldFilter extends AFilter {
 
 	/**
 	 * key in INFO column
@@ -31,10 +34,12 @@ public class InfoFieldFilter extends AFilter {
 	/**
 	 * Default constructor
 	 * 
-	 * @param info The key in INFO column
-	 * @param type Value of the info input in the INFO column
+	 * @param info
+	 *            The key in INFO column
+	 * @param type
+	 *            Value of the info input in the INFO column
 	 */
-	public InfoFieldFilter(String info, Object type) {
+	public AInfoFieldFilter(String info, Object type) {
 		super(FilterType.INFO_FIELD_FILTER);
 		this.info = info;
 		this.type = type;
@@ -56,8 +61,11 @@ public class InfoFieldFilter extends AFilter {
 					return getVariantContextFromArray(vc, val);
 				else if (val instanceof List)
 					return getVariantContextFromArray(vc, ((List<?>) val).toArray());
-				else if (equalInfoType(val, type))
+				else if (compareInfoType(type, val))
 					return optional_vc;
+				else {
+					return Optional.empty();
+				}
 			}
 		}
 		return optional_vc;
@@ -73,17 +81,35 @@ public class InfoFieldFilter extends AFilter {
 			List<Allele> alleles = new ArrayList<Allele>();
 			alleles.add(vc.getReference());
 			for (int i = 0; i < length; i++) {
-				if (equalInfoType(type, Array.get(infoField, i)))
+				if (compareInfoType(type, Array.get(infoField, i)))
 					alleles.add(vc.getAlternateAllele(i));
 			}
 			// no allele matches, return null
 			if (alleles.size() <= 1)
 				return Optional.empty();
-			else
-				return Optional.of(new VariantContextBuilder(vc).alleles(alleles).make());
-		} else { // hack, no we add if one allele matches it.
+			else {
+				List<Genotype> genotypes = new ArrayList<>();
+				for (String sample : vc.getSampleNames()) {
+					Genotype g = vc.getGenotype(sample);
+					
+					List<Allele> g_alleles = new ArrayList<>();
+					for (Allele allele : g.getAlleles()) {
+						if (alleles.contains(allele))
+							g_alleles.add(allele);
+						else {
+							g_alleles.add(Allele.NO_CALL);
+						}
+					}
+					GenotypeBuilder gb = new GenotypeBuilder().phased(g.isPhased()).alleles(g_alleles).name(sample);
+					
+					genotypes.add(gb.make());
+				}
+				
+				return Optional.of(new VariantContextBuilder(vc).alleles(alleles).genotypes(genotypes).make());
+			}
+		} else { // hack, now we add if one allele matches it.
 			for (int i = 0; i < length; i++) {
-				if (equalInfoType(type, Array.get(infoField, i)))
+				if (compareInfoType(type, Array.get(infoField, i)))
 					return Optional.of(vc);
 			}
 		}
@@ -91,8 +117,25 @@ public class InfoFieldFilter extends AFilter {
 
 	}
 
-	private boolean equalInfoType(Object attribute, Object infoType) {
-		return attribute.toString().equals(infoType.toString());
+	protected abstract boolean compareInfoType(Object should, Object is);
+
+	protected int compare(Object should, Object is) {
+		if (should instanceof String) {
+			return ((String) should).compareTo((String) is);
+		} else if (should instanceof Integer)
+			return ((Integer) should).compareTo(Integer.valueOf((String) is));
+		else if (should instanceof Double)
+			return ((Double) should).compareTo(Double.valueOf((String) is));
+
+		throw new RuntimeException("Cannot compare object " + should + " with object " + is);
+	}
+
+	private static boolean isDouble(String string) {
+		return Pattern.matches("^\\d+(.\\d+)?$", string);
+	}
+
+	private static boolean isInt(String string) {
+		return Pattern.matches("^\\d+$", string);
 	}
 
 }

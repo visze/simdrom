@@ -527,7 +527,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 			// filter
 			Optional<VariantContext> optional_candidate = filter(candidate);
-			if (optional_candidate.isPresent())
+			if (!optional_candidate.isPresent())
 				continue;
 			candidate = optional_candidate.get();
 
@@ -562,7 +562,9 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 			Map<Integer, Boolean> alleles) {
 		if (sample.isPresent()) {
 			Genotype genotype = candidate.getGenotype(sample.get());
-			if (!genotype.isHomRef())
+			if (genotype.isMixed() || genotype.isNoCall())
+				return Optional.empty();
+			else if (!genotype.isHomRef())
 				return Optional.of(
 						new VariantContextBuilder(candidate).genotypes(candidate.getGenotypes(sample.get())).make());
 			else

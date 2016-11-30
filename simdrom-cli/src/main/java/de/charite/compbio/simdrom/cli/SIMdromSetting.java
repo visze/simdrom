@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableSet;
 import de.charite.compbio.simdrom.cli.exception.MissingOptionsException;
 import de.charite.compbio.simdrom.cli.exception.NotAllowedCombinationOfOptionsException;
 import de.charite.compbio.simdrom.cli.exception.WrongIntervalFormatException;
+import de.charite.compbio.simdrom.filter.EqualInfoFieldFilter;
 import de.charite.compbio.simdrom.filter.IFilter;
-import de.charite.compbio.simdrom.filter.InfoFieldFilter;
 import de.charite.compbio.simdrom.interval.SAMFileHeaderBuilder;
 import htsjdk.samtools.util.Interval;
 import htsjdk.samtools.util.IntervalList;
@@ -329,11 +329,11 @@ public class SIMdromSetting {
 				for (String opt : cmd.getOptionValues("mutations-info-filter")) {
 					String[] split = opt.split("=");
 					if (isInt(split[1])) {
-						filters.add(new InfoFieldFilter(split[0], Integer.parseInt(split[1])));
+						filters.add(new EqualInfoFieldFilter(split[0], Integer.parseInt(split[1])));
 					} else if (isDouble(split[1])) {
-						filters.add(new InfoFieldFilter(split[0], Double.parseDouble(split[1])));
+						filters.add(new EqualInfoFieldFilter(split[0], Double.parseDouble(split[1])));
 					} else {
-						filters.add(new InfoFieldFilter(split[0], split[1]));
+						filters.add(new EqualInfoFieldFilter(split[0], split[1]));
 					}
 				}
 			}
