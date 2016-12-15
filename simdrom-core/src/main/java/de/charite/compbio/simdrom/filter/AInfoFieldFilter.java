@@ -137,5 +137,5 @@ public abstract class AInfoFieldFilter extends AFilter {
 	private static boolean isInt(String string) {
 		return Pattern.matches("^\\d+$", string);
 	}
-
+	
 }

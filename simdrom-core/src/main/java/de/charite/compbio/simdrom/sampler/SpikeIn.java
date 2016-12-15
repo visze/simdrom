@@ -18,13 +18,16 @@ import htsjdk.variant.vcf.VCFInfoHeaderLine;
 
 public class SpikeIn implements CloseableIterator<VariantContext> {
 
-	private VCFSampler backgroundSampler;
-	private Optional<VCFSampler> mutationSampler;
+	private final VCFSampler backgroundSampler;
+	private final Optional<VCFSampler> mutationSampler;
 
 	private Optional<VariantContext> backgroundVC;
 	private Optional<VariantContext> mutationsVC;
+	private boolean sameContig = false;
 
-	private boolean log;
+	private final VCFHeader header;
+
+	private final boolean log;
 	private Set<VariantContext> vcLogs;
 
 	public SpikeIn(VCFSampler backgroundSampler, boolean log) {
@@ -34,12 +37,13 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 	public SpikeIn(VCFSampler backgroundSampler, VCFSampler mutationSampler, boolean log) {
 		this(backgroundSampler, Optional.of(mutationSampler), log);
 	}
-	
+
 	private SpikeIn(VCFSampler backgroundSampler, Optional<VCFSampler> mutationSampler, boolean log) {
 		super();
 		this.backgroundSampler = backgroundSampler;
 		this.mutationSampler = mutationSampler;
 		this.log = log;
+		header = createHeader();
 
 		this.backgroundVC = getNextBackground();
 		this.mutationsVC = getNextMutation();
@@ -77,6 +81,10 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 	}
 
 	public VCFHeader getVCFHeader() {
+		return header;
+	}
+
+	private VCFHeader createHeader() {
 		Set<VCFHeaderLine> metaData = new LinkedHashSet<VCFHeaderLine>();
 		metaData.addAll(backgroundSampler.getVCFHeader().getMetaDataInInputOrder());
 		// FIXME workaround for ExAC and 1000 genome data
@@ -99,6 +107,16 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 		return getNextVariantContext();
 	}
 
+	// private VariantContext modifyInfoColumn(VariantContext vc) {
+	// VariantContextBuilder builder = new VariantContextBuilder(vc);
+	// for (VCFInfoHeaderLine line : header.getInfoHeaderLines()) {
+	// String id = line.getID();
+	// if (!vc.hasAttribute(id))
+	// builder.attribute(id, ".");
+	// }
+	// return builder.make();
+	// }
+
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException();
@@ -109,14 +127,20 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 		boolean mutationSelection = false;
 		if (backgroundVC.isPresent() && mutationsVC.isPresent()) {
 			if (backgroundVC.get().getContig().equals(mutationsVC.get().getContig())) {
-				if (backgroundVC.get().getStart() <= mutationsVC.get().getStart()) {
-					output = backgroundVC.get();
+				this.sameContig = true;
+				if (mutationsVC.get().getStart() <= backgroundVC.get().getStart()) {
+					output = mutationsVC.get();
 					mutationSelection = true;
 				} else
-					output = mutationsVC.get();
-			} else
-				output = backgroundVC.get();
-
+					output = backgroundVC.get();
+			} else {
+				if (sameContig) { // final write if we switch to the next contig
+					output = backgroundVC.get();
+					mutationSelection = true;
+				} else 
+					output = backgroundVC.get();
+				sameContig = false;
+			}
 		} else if (mutationsVC.isPresent()) {
 			output = mutationsVC.get();
 			mutationSelection = true;
