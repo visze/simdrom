@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -122,7 +123,7 @@ public class SIMdromSetting {
 	/**
 	 * Intervals. only write out at these points.
 	 */
-	public static IntervalList INTERVALS;
+	public static Optional<IntervalList> INTERVALS;
 	/**
 	 * Output file. null if standard out.
 	 */
@@ -320,9 +321,11 @@ public class SIMdromSetting {
 				for (String intervalString : cmd.getOptionValues("interval")) {
 					lst.addAll(getIntervalOfOption(intervalString));
 				}
-				INTERVALS = new IntervalList(SAMFileHeaderBuilder.build());
-				INTERVALS.addall(lst);
-			}
+				IntervalList list = new IntervalList(SAMFileHeaderBuilder.build());
+				list.addall(lst);
+				INTERVALS = Optional.of(list);
+			} else
+				INTERVALS = Optional.empty();
 			// filters
 			Set<IFilter> filters = new HashSet<IFilter>();
 			if (cmd.hasOption("mutations-info-filter")) {

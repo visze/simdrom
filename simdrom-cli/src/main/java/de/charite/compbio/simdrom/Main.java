@@ -53,13 +53,22 @@ public class Main {
 
 		backgroundSamplerBuilder = backgroundSamplerBuilder.variantsAmount(SIMdromSetting.BACKGROUND_VARIANT_NUMBER);
 
-		backgroundSamplerBuilder = backgroundSamplerBuilder.intervals(SIMdromSetting.INTERVALS);
+		if (SIMdromSetting.INTERVALS.isPresent())
+			backgroundSamplerBuilder = backgroundSamplerBuilder.intervals(SIMdromSetting.INTERVALS);
 
 		if (SIMdromSetting.USE_DE_NOVO)
 			backgroundSamplerBuilder = backgroundSamplerBuilder
 					.deNovoGenerator(new DeNovoSampler(SIMdromSetting.DE_NOVO_RATE, SIMdromSetting.REFERENCE));
 
-		// 3) Set VCF for mutation (if set) and settings
+		// 3) Build writer
+		VariantContextWriter writer;
+		if (SIMdromSetting.OUTPUT == null)
+			writer = new VariantContextWriterBuilder().setOutputVCFStream(System.out)
+					.unsetOption(Options.INDEX_ON_THE_FLY).build();
+		else
+			writer = new VariantContextWriterBuilder().setOutputFile(SIMdromSetting.OUTPUT).build();
+		
+		// 4) Set VCF for mutation (if set) and settings
 		// VCFSampler mutationSampler = null;
 		VCFSampler.Builder mutationSamplerBuilder = new VCFSampler.Builder();
 		if (SIMdromSetting.MUTATIONS_VCF != null) {
@@ -84,50 +93,58 @@ public class Main {
 
 			mutationSamplerBuilder = mutationSamplerBuilder.variantsAmount(SIMdromSetting.MUTATIONS_VARIANT_NUMBER);
 
-			mutationSamplerBuilder = mutationSamplerBuilder.intervals(SIMdromSetting.INTERVALS);
+			if (SIMdromSetting.INTERVALS.isPresent())
+				mutationSamplerBuilder = mutationSamplerBuilder.intervals(SIMdromSetting.INTERVALS);
 
-		}
+			// 5) Generate spikein class
+			boolean log = SIMdromSetting.SPLIKE_IN_LOGFILE != null;
+			SpikeIn spikein = new SpikeIn(backgroundSamplerBuilder.build(), mutationSamplerBuilder.build(), log);
+			
+			// 6) write out VCF header
+			writer.writeHeader(spikein.getVCFHeader());
 
-		// 4) Build writer
-		VariantContextWriter writer;
-		if (SIMdromSetting.OUTPUT == null)
-			writer = new VariantContextWriterBuilder().setOutputVCFStream(System.out)
-					.unsetOption(Options.INDEX_ON_THE_FLY).build();
-		else
-			writer = new VariantContextWriterBuilder().setOutputFile(SIMdromSetting.OUTPUT).build();
-
-		// 5) Generate spikein class
-		boolean log = SIMdromSetting.SPLIKE_IN_LOGFILE != null;
-		SpikeIn spikein = new SpikeIn(backgroundSamplerBuilder.build(), mutationSamplerBuilder.build(), log);
-
-		// 6) write out VCF header
-		writer.writeHeader(spikein.getVCFHeader());
-
-		// 7) spike in and write out
-		while (spikein.hasNext()) {
-			VariantContext vc = spikein.next();
-			if (vc == null)
-				break;
-			writer.add(vc);
-		}
-
-		// 8) write log if set
-		if (log) {
-			VCFTSVWriter logWriter = new VCFTSVWriter(SIMdromSetting.SPLIKE_IN_LOGFILE);
-			boolean header = false;
-			for (VariantContext vc : spikein.getVcLogs()) {
-				if (!header) {
-					logWriter.writeHeader(vc);
-					header = true;
-				}
-				logWriter.add(vc);
+			// 7) spike in and write out
+			while (spikein.hasNext()) {
+				VariantContext vc = spikein.next();
+				if (vc == null)
+					break;
+				writer.add(vc);
 			}
-			logWriter.close();
+
+			// 8) write log if set
+			if (log) {
+				VCFTSVWriter logWriter = new VCFTSVWriter(SIMdromSetting.SPLIKE_IN_LOGFILE);
+				boolean header = false;
+				for (VariantContext vc : spikein.getVcLogs()) {
+					if (!header) {
+						logWriter.writeHeader(vc);
+						header = true;
+					}
+					logWriter.add(vc);
+				}
+				logWriter.close();
+			}
+			
+			spikein.close();
+		} else {
+			VCFSampler sampler = backgroundSamplerBuilder.build();
+			writer.writeHeader(sampler.getVCFHeader());
+			
+			
+			while (sampler.hasNext()) {
+				VariantContext vc = sampler.next();
+				if (vc == null)
+					break;
+				writer.add(vc);
+			}
+
 		}
+
+	
 
 		// 9) close properly and exit properly
 		writer.close();
-		spikein.close();
+		
 		System.exit(0);
 	}
 }
