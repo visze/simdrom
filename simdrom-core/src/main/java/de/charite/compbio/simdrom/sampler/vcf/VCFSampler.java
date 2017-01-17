@@ -352,8 +352,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		 *            parsed
 		 * @return The builder with the initialized {@link #intervals}
 		 */
-		public Builder intervals(Optional<IntervalList> intervals) {
-			this.intervals = intervals.get().uniqued().sorted();
+		public Builder intervals(IntervalList intervals) {
+			this.intervals = intervals.uniqued().sorted();
 			return this;
 		}
 

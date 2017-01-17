@@ -54,7 +54,7 @@ public class Main {
 		backgroundSamplerBuilder = backgroundSamplerBuilder.variantsAmount(SIMdromSetting.BACKGROUND_VARIANT_NUMBER);
 
 		if (SIMdromSetting.INTERVALS.isPresent())
-			backgroundSamplerBuilder = backgroundSamplerBuilder.intervals(SIMdromSetting.INTERVALS);
+			backgroundSamplerBuilder = backgroundSamplerBuilder.intervals(SIMdromSetting.INTERVALS.get());
 
 		if (SIMdromSetting.USE_DE_NOVO)
 			backgroundSamplerBuilder = backgroundSamplerBuilder
@@ -94,7 +94,7 @@ public class Main {
 			mutationSamplerBuilder = mutationSamplerBuilder.variantsAmount(SIMdromSetting.MUTATIONS_VARIANT_NUMBER);
 
 			if (SIMdromSetting.INTERVALS.isPresent())
-				mutationSamplerBuilder = mutationSamplerBuilder.intervals(SIMdromSetting.INTERVALS);
+				mutationSamplerBuilder = mutationSamplerBuilder.intervals(SIMdromSetting.INTERVALS.get());
 
 			// 5) Generate spikein class
 			boolean log = SIMdromSetting.SPLIKE_IN_LOGFILE != null;
