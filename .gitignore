@@ -15,6 +15,9 @@ buildNumber.properties
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
+# built manual
+manual/_build
+
 # Package Files #
 *.jar
 *.war
