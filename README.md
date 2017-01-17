@@ -1,7 +1,7 @@
 * [![Build Status](https://travis-ci.org/visze/simdrom.svg?branch=master)](https://travis-ci.org/visze/simdrom) - Master 
 * [![Build Status](https://travis-ci.org/visze/simdrom.svg?branch=development)](https://travis-ci.org/visze/simdrom) - Development
 * [![Documentation Status](https://readthedocs.org/projects/simdrom/badge/?version=latest)](http://simdrom.readthedocs.io/en/latest/?badge=latest)
-* [![Documentation Status](https://readthedocs.org/projects/simdrom/badge/?version=development)](http://simdrom.readthedocs.io/en/latest/?badge=development)
+* [![Documentation Status](https://readthedocs.org/projects/simdrom/badge/?version=development)](http://simdrom.readthedocs.io/en/development/?badge=development)
 
 # SIMdrom
 
