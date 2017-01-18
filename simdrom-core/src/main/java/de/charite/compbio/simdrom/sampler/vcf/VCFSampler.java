@@ -11,12 +11,15 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 
+import de.charite.compbio.simdrom.exception.InfoIDNotFoundException;
 import de.charite.compbio.simdrom.filter.IFilter;
 import de.charite.compbio.simdrom.sampler.DeNovoSampler;
 import htsjdk.samtools.SAMFileHeader;
@@ -177,6 +180,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		this.selectAlleles = selectAlleles;
 		this.deNovoGenerator = deNovoSampler;
 		this.random = random;
+
 		next();
 	}
 
@@ -405,6 +409,17 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				acIdentifier = null;
 				anIdentifier = null;
 			}
+			
+			// check if identifiers ar present
+			
+			List<String> ids = Lists.newArrayList(acIdentifier,anIdentifier,afIdentifier);
+			ids.removeIf(Objects::isNull);
+			for (String id : ids) {
+				if (reader.getFileHeader().getInfoHeaderLine(id) == null){
+					throw new InfoIDNotFoundException(id);
+				}
+			}
+			
 
 			if (variantsAmount < 0)
 				variantsAmount = 0;
@@ -643,7 +658,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		} else if (useCounts()) { // variantsAmount > 0
 			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++) {
 				this.position++;
-				if (selectAlleles.contains(position + i))
+				if (selectAlleles.contains(position))
 					candidates.put(i, nextDouble() <= 0.5);
 			}
 
