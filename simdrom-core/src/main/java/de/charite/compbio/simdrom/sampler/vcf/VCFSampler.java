@@ -15,9 +15,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MoreCollectors;
 
 import de.charite.compbio.simdrom.exception.InfoIDNotFoundException;
 import de.charite.compbio.simdrom.filter.IFilter;
@@ -409,17 +411,16 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				acIdentifier = null;
 				anIdentifier = null;
 			}
-			
+
 			// check if identifiers ar present
-			
-			List<String> ids = Lists.newArrayList(acIdentifier,anIdentifier,afIdentifier);
+
+			List<String> ids = Lists.newArrayList(acIdentifier, anIdentifier, afIdentifier);
 			ids.removeIf(Objects::isNull);
 			for (String id : ids) {
-				if (reader.getFileHeader().getInfoHeaderLine(id) == null){
+				if (reader.getFileHeader().getInfoHeaderLine(id) == null) {
 					throw new InfoIDNotFoundException(id);
 				}
 			}
-			
 
 			if (variantsAmount < 0)
 				variantsAmount = 0;
@@ -567,10 +568,11 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 */
 	private Optional<VariantContext> filter(VariantContext candidate) {
 		Optional<VariantContext> optional_vc = Optional.of(candidate);
+		Stream<Optional<VariantContext>> candidateStream = Stream.of(optional_vc);
 		for (IFilter iFilter : getFilters()) {
-			optional_vc = iFilter.filter(optional_vc);
+			candidateStream = candidateStream.map(iFilter::filter);
 		}
-		return optional_vc;
+		return candidateStream.collect(MoreCollectors.onlyElement());
 	}
 
 	private Optional<VariantContext> createVariantContextWithGenotype(VariantContext candidate,
