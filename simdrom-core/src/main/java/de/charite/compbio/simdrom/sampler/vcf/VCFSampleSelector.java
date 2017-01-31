@@ -59,7 +59,7 @@ public class VCFSampleSelector {
 		this.sample = Optional.of(sample);
 		if (!samples.contains(this.sample.get()))
 			throw new RuntimeException(
-					"Sample " + this.sample.get() + " is nor present in the VCF file " + file.getAbsolutePath());
+					"Sample " + this.sample.get() + " is not present in the VCF file " + file.getAbsolutePath());
 	}
 
 	/**
