@@ -46,6 +46,12 @@ public class Main {
 						SIMdromSetting.ONLY_ONE_BACKGROUND_SAMPLE_NAME);
 			backgroundSamplerBuilder.sample(selecter.getSample());
 		}
+		
+		// change the default sample name
+		backgroundSamplerBuilder.sampleName(SIMdromSetting.SAMPLE_NAME);
+		
+		
+		
 		backgroundSamplerBuilder = backgroundSamplerBuilder
 				.afIdentifier(SIMdromSetting.BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER)
 				.acIdentifier(SIMdromSetting.BACKGROUND_ALT_ALLELE_COUNT)

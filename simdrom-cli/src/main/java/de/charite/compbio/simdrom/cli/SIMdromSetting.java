@@ -125,6 +125,10 @@ public class SIMdromSetting {
 	 */
 	public static Optional<IntervalList> INTERVALS;
 	/**
+	 * Sample name.
+	 */
+	public static String SAMPLE_NAME = "Sampled";
+	/**
 	 * Output file. null if standard out.
 	 */
 	public static String OUTPUT;
@@ -233,12 +237,16 @@ public class SIMdromSetting {
 		options.addOption(Option.builder().hasArgs().longOpt("mutations-info-filter")
 				.desc("Optional. Uses the VCF info field to kepp only variants that passed the filter. Filter is written using the info field id followed by '=' and the value. Like CLNSIG=5")
 				.build());
-
+		
+		// sample name
+		options.addOption(Option.builder("n").hasArg().longOpt("sample-name")
+				.desc("Default 'Sampled'. Set a specific name for the sample.").build());
+		
 		// output
 		options.addOption(Option.builder("o").hasArg().longOpt("output")
 				.desc("Optional. Writes the variants into this (bgzip) VCF file instead of printing it to the standard output.")
 				.build());
-
+		
 		CommandLineParser parser = new DefaultParser();
 		try {
 			CommandLine cmd = parser.parse(options, args);
@@ -315,6 +323,7 @@ public class SIMdromSetting {
 			// spike in log
 			if (cmd.hasOption("spike-in-log"))
 				SPLIKE_IN_LOGFILE = cmd.getOptionValue("spike-in-log");
+			
 			// intervals
 			if (cmd.hasOption("interval")) {
 				List<Interval> lst = new ArrayList<Interval>();
@@ -326,6 +335,7 @@ public class SIMdromSetting {
 				INTERVALS = Optional.of(list);
 			} else
 				INTERVALS = Optional.empty();
+			
 			// filters
 			Set<IFilter> filters = new HashSet<IFilter>();
 			if (cmd.hasOption("mutations-info-filter")) {
@@ -341,6 +351,10 @@ public class SIMdromSetting {
 				}
 			}
 			MUTATIONS_FILTERS = ImmutableSet.<IFilter> builder().addAll(filters).build();
+			
+			// sample name
+			if (cmd.hasOption("sample-name"))
+				SAMPLE_NAME = cmd.getOptionValue("sample-name");
 
 			// output
 			if (cmd.hasOption("output")) {

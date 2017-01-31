@@ -55,16 +55,16 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 	private Optional<VariantContext> getNextMutation() {
 		if ((this.mutationSampler.isPresent() && this.mutationSampler.get().hasNext())) {
 			VariantContext mutationsVC = this.mutationSampler.get().next();
-			if (mutationsVC != null) {
-				String sample = VCFSampler.DEFAULT_SAMPLE_NAME;
-				if (this.backgroundSampler.getSample().isPresent())
-					sample = this.backgroundSampler.getSample().get();
-				Genotype genotype = GenotypeBuilder.create(sample,
-						(this.mutationSampler.get().getSample().isPresent()
-								? mutationsVC.getGenotype(this.mutationSampler.get().getSample().get()).getAlleles()
-								: mutationsVC.getAlleles()));
-				mutationsVC = new VariantContextBuilder(mutationsVC).genotypes(genotype).make();
-			}
+			String sample;
+			if (this.backgroundSampler.getSample().isPresent())
+				sample = this.backgroundSampler.getSample().get();
+			else
+				sample = backgroundSampler.getSampleName();
+			Genotype genotype = GenotypeBuilder.create(sample,
+					(this.mutationSampler.get().getSample().isPresent()
+							? mutationsVC.getGenotype(this.mutationSampler.get().getSample().get()).getAlleles()
+							: mutationsVC.getAlleles()));
+			mutationsVC = new VariantContextBuilder(mutationsVC).genotypes(genotype).make();
 			return Optional.of(mutationsVC);
 		}
 		return Optional.empty();
@@ -137,7 +137,7 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 				if (sameContig) { // final write if we switch to the next contig
 					output = backgroundVC.get();
 					mutationSelection = true;
-				} else 
+				} else
 					output = backgroundVC.get();
 				sameContig = false;
 			}
