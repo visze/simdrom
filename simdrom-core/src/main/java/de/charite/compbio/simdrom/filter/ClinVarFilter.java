@@ -107,7 +107,7 @@ public class ClinVarFilter extends AFilter {
 						}
 					}
 					builder = builder.attributes(dbAttributes.asMap());
-					builder = builder.attribute("CLINSIG", sigs_dbs_ids.keySet());
+					builder = builder.attribute("CLNSIG", sigs_dbs_ids.keySet());
 					return Optional.of(builder.make());
 				}
 

@@ -28,19 +28,17 @@
 	</modules>
 
 	<build>
+<pluginManagement>
+      <plugins>
+							<!-- JUnit testing -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.19.1</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
 		<plugins>
-			<!-- JUnit testing -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<version>2.19.1</version>
-				<configuration>
-					<skipTests>false</skipTests>
-					<forkCount>3</forkCount>
-					<reuseForks>true</reuseForks>
-					<argLine>${argLine} -Xms512m -Xmx1024m</argLine>
-				</configuration>
-			</plugin>
 
 			<!-- Javadoc generation. -->
 			<plugin>
