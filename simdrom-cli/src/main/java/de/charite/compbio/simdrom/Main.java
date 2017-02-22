@@ -150,8 +150,6 @@ public class Main {
 			
 			while (sampler.hasNext()) {
 				VariantContext vc = sampler.next();
-				if (vc.getStart() == 62329885)
-					System.out.println(vc); 
 				if (vc == null)
 					break;
 				writer.add(vc);

@@ -660,7 +660,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 	private Map<Integer, Boolean> useAlleles(VariantContext candidate) {
 		Map<Integer, Boolean> candidates = new HashMap<Integer, Boolean>();
-
+		
 		if (useAF()) {// AF flag
 			Object af = candidate.getCommonInfo().getAttribute(getAFIdentifier());
 			if (af instanceof ArrayList<?>) {
@@ -671,6 +671,9 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 						i++;
 					}
 				}
+				// Problems with multiple alleles. This tears them down to only two alleles!
+				if (countAlleles(candidates) > 2)
+					candidates = selectedMaxTwoAlleles(candidates);
 			} else {
 				addCandidateByHardyWeinberg(candidates, 0,
 						candidate.getCommonInfo().getAttributeAsDouble(getAFIdentifier(), 0.0));
@@ -686,6 +689,9 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 						i++;
 					}
 				}
+				// Problems with multiple alleles. This tears them down to only two alleles!
+				if (countAlleles(candidates) > 2)
+					candidates = selectedMaxTwoAlleles(candidates);
 			} else {
 				addCandidateByHardyWeinberg(candidates, 0,
 						(double) candidate.getCommonInfo().getAttributeAsInt(getACIdentifier(), 0) / (double) an);
@@ -705,6 +711,39 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		}
 		return candidates;
 
+	}
+
+	private Map<Integer, Boolean> selectedMaxTwoAlleles(Map<Integer, Boolean> candidates) {
+		Map<Integer, Boolean>  output = new HashMap<>();
+		int count = 0;
+		List<Integer> integers = Lists.newArrayList(candidates.keySet());
+		Collections.shuffle(integers,random);
+		
+		for (Integer genotype : integers) {
+			if (count == 2)
+				return output;
+			int alleles = (candidates.get(genotype) ? 2 : 1);
+			if (count + alleles > 2) {
+				count += 1;
+				output.put(genotype, false);
+			} else {
+				count += alleles;
+				output.put(genotype, candidates.get(genotype));
+			}
+				
+		}
+		return output;
+	}
+
+	private int countAlleles(Map<Integer, Boolean> candidates) {
+		int i = 0;
+		for (Boolean hom : candidates.values()) {
+			if (hom)
+				i += 2;
+			else
+				i+=1;
+		}
+		return i;
 	}
 
 	private boolean useAC() {
