@@ -446,31 +446,33 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 					throw new InfoIDNotFoundException(id);
 				}
 			}
-
-			if (variantsAmount < 0)
-				variantsAmount = 0;
-			else if (variantsAmount > 0) {
-				VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(reader.iterator(), filters,
-						sample);
-				setCounts(counter.getCounts());
-			}
-
+			
 			Random random;
 			if (useSeed)
 				random = new Random(seed);
 			else
 				random = new Random();
 
+			if (variantsAmount < 0)
+				variantsAmount = 0;
+			else if (variantsAmount > 0) {
+				VCFAlternativeAlleleCounter counter = new VCFAlternativeAlleleCounter(reader.iterator(), filters,
+						sample);
+				setCounts(counter.getCounts(), random);
+			}
+
+			
+
 			return new VCFSampler(reader, probability, sample, variantsAmount, afIdentifier, acIdentifier, anIdentifier,
 					filters, intervals, deNovoSampler, selectAlleles, random, sampleName);
 		}
 
-		private void setCounts(int counts) {
+		private void setCounts(int counts, Random random) {
 			List<Integer> randomAlleles = new ArrayList<Integer>(counts);
 			for (int i = 0; i < counts; i++) {
 				randomAlleles.add(i);
 			}
-			Collections.shuffle(randomAlleles);
+			Collections.shuffle(randomAlleles, random);
 			this.selectAlleles = new ArrayList<Integer>(this.variantsAmount);
 			for (int i = 0; i < this.variantsAmount; i++) {
 				this.selectAlleles.add(randomAlleles.get(i));

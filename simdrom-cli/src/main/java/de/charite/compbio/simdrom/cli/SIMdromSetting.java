@@ -39,7 +39,16 @@ import htsjdk.samtools.util.IntervalList;
  *
  */
 public class SIMdromSetting {
-
+	
+	/**
+	 *  use a SEED if set
+	 */
+	public static boolean USE_SEED = false;
+	
+	/**
+	 * The seed
+	 */
+	public static long SEED = 42;
 	/**
 	 * VCF of the background mutation. These mutations are used to sample a new mutation file. Required.
 	 */
@@ -150,6 +159,11 @@ public class SIMdromSetting {
 
 		// help
 		options.addOption(Option.builder("h").longOpt("help").desc("Show this help message").build());
+		
+		// seed
+		options.addOption(Option.builder().longOpt("seed").hasArg()
+				.desc("If set a the random number generation uses this seed.")
+				.build());
 
 		// background vcf
 		options.addOption(Option.builder("b").longOpt("background-population").hasArg().required().type(File.class)
@@ -262,6 +276,11 @@ public class SIMdromSetting {
 			checkMissingOption(cmd, "background-allele-count", "background-alt-allele-count");
 			checkMissingOption(cmd, "mutations-allele-count", "mutations-alt-allele-count");
 			checkMissingOption(cmd, "de-novo", "reference");
+			
+			if (cmd.hasOption("seed")) {
+				USE_SEED = true;
+				SEED = Integer.parseInt(cmd.getOptionValue("seed"));
+			}
 
 			BACKGROUND_VCF = (File) cmd.getParsedOptionValue("background-population");
 			if (cmd.hasOption("mutations"))

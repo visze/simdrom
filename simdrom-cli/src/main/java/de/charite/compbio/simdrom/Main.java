@@ -25,22 +25,32 @@ import htsjdk.variant.variantcontext.writer.VariantContextWriterBuilder;
 public class Main {
 
 	public static void main(String[] args) throws ParseException, IOException {
+		
 
+
+		
 		// 1) Parse options
 		SIMdromSetting.parse(args);
+		
+		Random random = new Random();
+		
+		if (SIMdromSetting.USE_SEED)
+			random.setSeed(SIMdromSetting.SEED);
 
 		// 2) Set VCF for background population and settings
 		VCFSampler.Builder backgroundSamplerBuilder = new VCFSampler.Builder();
+		backgroundSamplerBuilder.seed(random.nextLong());
 
 		// VCFSampler backgroundSampler = new VCFSampler(SIMdromSetting.BACKGROUND_VCF);
 		backgroundSamplerBuilder = backgroundSamplerBuilder.file(SIMdromSetting.BACKGROUND_VCF)
 				.probability(SIMdromSetting.BACKGROUND_PROBABILITY);
 
+
 		// select (random) sample if set
 		if (SIMdromSetting.ONLY_ONE_BACKGROUND_SAMPLE) {
 			VCFSampleSelector selecter;
 			if (SIMdromSetting.ONLY_ONE_BACKGROUND_SAMPLE_NAME == null)
-				selecter = new VCFSampleSelector(SIMdromSetting.BACKGROUND_VCF, new Random().nextLong());
+				selecter = new VCFSampleSelector(SIMdromSetting.BACKGROUND_VCF, random.nextLong());
 			else
 				selecter = new VCFSampleSelector(SIMdromSetting.BACKGROUND_VCF,
 						SIMdromSetting.ONLY_ONE_BACKGROUND_SAMPLE_NAME);
@@ -81,12 +91,13 @@ public class Main {
 
 			mutationSamplerBuilder = mutationSamplerBuilder.file(SIMdromSetting.MUTATIONS_VCF)
 					.probability(SIMdromSetting.MUTATIONS_PROBABILITY).filters(SIMdromSetting.MUTATIONS_FILTERS);
+			mutationSamplerBuilder.seed(random.nextLong());
 
 			// select (random) sample if set
 			if (SIMdromSetting.ONLY_ONE_MUTATIONS_SAMPLE) {
 				VCFSampleSelector selecter;
 				if (SIMdromSetting.ONLY_ONE_MUTATIONS_SAMPLE_NAME == null)
-					selecter = new VCFSampleSelector(SIMdromSetting.MUTATIONS_VCF, new Random().nextLong());
+					selecter = new VCFSampleSelector(SIMdromSetting.MUTATIONS_VCF, random.nextLong());
 				else
 					selecter = new VCFSampleSelector(SIMdromSetting.MUTATIONS_VCF,
 							SIMdromSetting.ONLY_ONE_MUTATIONS_SAMPLE_NAME);
@@ -139,6 +150,8 @@ public class Main {
 			
 			while (sampler.hasNext()) {
 				VariantContext vc = sampler.next();
+				if (vc.getStart() == 62329885)
+					System.out.println(vc); 
 				if (vc == null)
 					break;
 				writer.add(vc);
