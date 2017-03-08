@@ -39,12 +39,12 @@ import htsjdk.samtools.util.IntervalList;
  *
  */
 public class SIMdromSetting {
-	
+
 	/**
-	 *  use a SEED if set
+	 * use a SEED if set
 	 */
 	public static boolean USE_SEED = false;
-	
+
 	/**
 	 * The seed
 	 */
@@ -102,17 +102,33 @@ public class SIMdromSetting {
 	 */
 	public static String BACKGROUND_ALT_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the ALT allele count in the {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 * Identifier in the info-String of the ALT allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String MUTATIONS_ALT_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the all allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the all allele count in the {@link SIMdromSetting#BACKGROUND_VCF} file.
 	 */
 	public static String BACKGROUND_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the all allele count in the {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 * Identifier in the info-String of the all allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String MUTATIONS_ALLELE_COUNT;
+	/**
+	 * Identifier in the info-String of the heterozygous allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 */
+	public static String BACKGROUND_HET_ALLELE_COUNT;
+	/**
+	 * Identifier in the info-String of the heterozygous allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 */
+	public static String MUTATIONS_HET_ALLELE_COUNT;
+	/**
+	 * Identifier in the info-String of the homozygous allele count in the {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 */
+	public static String BACKGROUND_HOM_ALLELE_COUNT;
+	/**
+	 * Identifier in the info-String of the homozygous allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 */
+	public static String MUTATIONS_HOM_ALLELE_COUNT;
 	/**
 	 * If set, generate deNovo mutations.
 	 */
@@ -159,11 +175,10 @@ public class SIMdromSetting {
 
 		// help
 		options.addOption(Option.builder("h").longOpt("help").desc("Show this help message").build());
-		
+
 		// seed
 		options.addOption(Option.builder().longOpt("seed").hasArg()
-				.desc("If set a the random number generation uses this seed.")
-				.build());
+				.desc("If set a the random number generation uses this seed.").build());
 
 		// background vcf
 		options.addOption(Option.builder("b").longOpt("background-population").hasArg().required().type(File.class)
@@ -228,6 +243,26 @@ public class SIMdromSetting {
 				.desc("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single probabilities per variant. (mAC/mAN)")
 				.build());
 
+		// background allele HET allele count
+		options.addOption(Option.builder("bAChet").hasArg().longOpt("background-het-allele-count")
+				.desc("Optional. If set, the identifier in the info string of the background VCF will be used to compute single heterozygous probabilities per variant. (bAChet/bAN)")
+				.build());
+
+		// mutations allele HET allele count
+		options.addOption(Option.builder("mAChet").hasArg().longOpt("mutations-het-allele-count")
+				.desc("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single heterozygous probabilities per variant. (mAChet/mAN)")
+				.build());
+
+		// background allele HOM allele count
+		options.addOption(Option.builder("bAChom").hasArg().longOpt("background-hom-allele-count")
+				.desc("Optional. If set, the identifier in the info string of the background VCF will be used to compute single homozygous probabilities per variant. (bAChom/bAN)")
+				.build());
+
+		// mutations allele HOM allele count
+		options.addOption(Option.builder("mAChom").hasArg().longOpt("mutations-hom-allele-count")
+				.desc("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single homozygous probabilities per variant. (mAChom/mAN)")
+				.build());
+
 		// deNovo rate
 		options.addOption(Option.builder().optionalArg(true).longOpt("de-novo")
 				.desc("Optional. If set, de-novo mutations are spiked in. Standard rate is 1.2*10^-8. But you can provide your own rate with this option. An indexed reference have to be set (see option --reference).")
@@ -251,16 +286,16 @@ public class SIMdromSetting {
 		options.addOption(Option.builder().hasArgs().longOpt("mutations-info-filter")
 				.desc("Optional. Uses the VCF info field to kepp only variants that passed the filter. Filter is written using the info field id followed by '=' and the value. Like CLNSIG=5")
 				.build());
-		
+
 		// sample name
 		options.addOption(Option.builder("n").hasArg().longOpt("sample-name")
 				.desc("Default 'Sampled'. Set a specific name for the sample.").build());
-		
+
 		// output
 		options.addOption(Option.builder("o").hasArg().longOpt("output")
 				.desc("Optional. Writes the variants into this (bgzip) VCF file instead of printing it to the standard output.")
 				.build());
-		
+
 		CommandLineParser parser = new DefaultParser();
 		try {
 			CommandLine cmd = parser.parse(options, args);
@@ -273,10 +308,21 @@ public class SIMdromSetting {
 					"background-allele-frequency-identifier", "background-allele-count");
 			checkNotAllowedOptions(cmd, "mutations-probability", "mutations-variants-amount",
 					"mutations-allele-frequency-identifier", "mutations-allele-count");
-			checkMissingOption(cmd, "background-allele-count", "background-alt-allele-count");
-			checkMissingOption(cmd, "mutations-allele-count", "mutations-alt-allele-count");
+			try {
+				checkMissingOption(cmd, "background-allele-count", "background-alt-allele-count");
+			} catch (MissingOptionsException e) {
+				checkMissingOption(cmd, "background-allele-count", "background-het-allele-count",
+						"background-hom-allele-count");
+			}
+			try {
+				checkMissingOption(cmd, "mutations-allele-count", "mutations-alt-allele-count");
+			} catch (MissingOptionsException e) {
+				checkMissingOption(cmd, "mutations-allele-count", "mutations-het-allele-count",
+						"mutations-hom-allele-count");
+			}
+
 			checkMissingOption(cmd, "de-novo", "reference");
-			
+
 			if (cmd.hasOption("seed")) {
 				USE_SEED = true;
 				SEED = Integer.parseInt(cmd.getOptionValue("seed"));
@@ -321,6 +367,20 @@ public class SIMdromSetting {
 			if (cmd.hasOption("mutations-allele-count")) {
 				MUTATIONS_ALLELE_COUNT = cmd.getOptionValue("mutations-allele-count");
 			}
+			// AChet identifier
+			if (cmd.hasOption("background-het-allele-count")) {
+				BACKGROUND_HET_ALLELE_COUNT = cmd.getOptionValue("background-het-allele-count");
+			}
+			if (cmd.hasOption("mutations-het-allele-count")) {
+				MUTATIONS_HET_ALLELE_COUNT = cmd.getOptionValue("mutations-het-allele-count");
+			}
+			// AChom identifier
+			if (cmd.hasOption("background-hom-allele-count")) {
+				BACKGROUND_HOM_ALLELE_COUNT = cmd.getOptionValue("background-hom-allele-count");
+			}
+			if (cmd.hasOption("mutations-hom-allele-count")) {
+				MUTATIONS_HOM_ALLELE_COUNT = cmd.getOptionValue("mutations-hom-allele-count");
+			}
 			// single sample background
 			if (cmd.hasOption("single-sample-background")) {
 				ONLY_ONE_BACKGROUND_SAMPLE = true;
@@ -342,7 +402,7 @@ public class SIMdromSetting {
 			// spike in log
 			if (cmd.hasOption("spike-in-log"))
 				SPLIKE_IN_LOGFILE = cmd.getOptionValue("spike-in-log");
-			
+
 			// intervals
 			if (cmd.hasOption("interval")) {
 				List<Interval> lst = new ArrayList<Interval>();
@@ -354,7 +414,7 @@ public class SIMdromSetting {
 				INTERVALS = Optional.of(list);
 			} else
 				INTERVALS = Optional.empty();
-			
+
 			// filters
 			Set<IFilter> filters = new HashSet<IFilter>();
 			if (cmd.hasOption("mutations-info-filter")) {
@@ -370,7 +430,7 @@ public class SIMdromSetting {
 				}
 			}
 			MUTATIONS_FILTERS = ImmutableSet.<IFilter> builder().addAll(filters).build();
-			
+
 			// sample name
 			if (cmd.hasOption("sample-name"))
 				SAMPLE_NAME = cmd.getOptionValue("sample-name");

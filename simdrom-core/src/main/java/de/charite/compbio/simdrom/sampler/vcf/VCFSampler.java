@@ -41,28 +41,24 @@ import htsjdk.variant.vcf.VCFHeaderLineType;
 
 /**
  * 
- * The {@link VCFSampler} class uses a VCF file as basis and acts as an iterator
- * over such a file. There are multiple possible options what the
- * {@link VCFSampler} does with the read {@link VariantContext}s.
+ * The {@link VCFSampler} class uses a VCF file as basis and acts as an iterator over such a file. There are multiple
+ * possible options what the {@link VCFSampler} does with the read {@link VariantContext}s.
  * <p>
  * <dl>
  * <dt>Filter</dt>
- * <dd>Variants can be filtered using multiple {@link IFilter}. Completely
- * removed variants where not finally passed into the iterator.</dd>
+ * <dd>Variants can be filtered using multiple {@link IFilter}. Completely removed variants where not finally passed
+ * into the iterator.</dd>
  * <dt>Sample selection</dt>
- * <dd>If a multi-VCF file is used there is the possibility to select one sample
- * out of it. It can be done randomly by running the VCFRandomSampleSelecter or
- * you can predefine a sample name. The sample name must be present in the VCF
+ * <dd>If a multi-VCF file is used there is the possibility to select one sample out of it. It can be done randomly by
+ * running the VCFRandomSampleSelecter or you can predefine a sample name. The sample name must be present in the VCF
  * header.</dd>
  * <dt>Variant generation using Hardy-Weinberg principle</dt>
- * <dd>If allele frequencies are present in the pares VCF they can be used to
- * generate a completely new artificial {@link Genotype} by using the
- * Hardy-Weinberg principle. Direct allele frequencies can be used of the allele
- * count divided by the number of total alleles.</dd> *
+ * <dd>If allele frequencies are present in the pares VCF they can be used to generate a completely new artificial
+ * {@link Genotype} by using the Hardy-Weinberg principle. Direct allele frequencies can be used of the allele count
+ * divided by the number of total alleles.</dd> *
  * <dt>Interval list</dt>
- * <dd>If an {@link IntervalList} is present only variants of that lists will be
- * pares by the {@link VCFFileReader} and these variants are only used by the
- * {@link VCFSampler}.</dd>
+ * <dd>If an {@link IntervalList} is present only variants of that lists will be pares by the {@link VCFFileReader} and
+ * these variants are only used by the {@link VCFSampler}.</dd>
  * <dt>De-novo generation</dt>
  * <dd>Inventing new variations. This function is not implemented yet.</dd>
  * </dl>
@@ -77,8 +73,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 */
 	private String sampleName;
 	/**
-	 * The probability to select a variant. If set to 1 all variants will be
-	 * selected.
+	 * The probability to select a variant. If set to 1 all variants will be selected.
 	 */
 	private double probability;
 	/**
@@ -86,9 +81,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 */
 	private List<Integer> selectAlleles;
 	/**
-	 * The maximum number of variants that should be selected by the sampler. If
-	 * set to smaller than 1 this option is of and there will be no maximum
-	 * limit used.
+	 * The maximum number of variants that should be selected by the sampler. If set to smaller than 1 this option is of
+	 * and there will be no maximum limit used.
 	 */
 	private int variantsAmount;
 	private int position = -1;
@@ -100,6 +94,14 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 * The identifier of the alt allele counts in the Info column.
 	 */
 	private String acIdentifier;
+	/**
+	 * The identifier of the het allele counts in the Info column.
+	 */
+	private String acHetIdentifier;
+	/**
+	 * The identifier of the hom allele counts in the Info column.
+	 */
+	private String acHomIdentifier;
 	/**
 	 * The identifier of the total number of alleles.
 	 */
@@ -118,13 +120,11 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 */
 	private CloseableIterator<VariantContext> iterator;
 	/**
-	 * The next variantContext. If this is null there will be no further variant
-	 * and {@link #hasNext()} is false.
+	 * The next variantContext. If this is null there will be no further variant and {@link #hasNext()} is false.
 	 */
 	private VariantContext next;
 	/**
-	 * Random number generator. Used if probabilities to choose a variant are
-	 * smaller than 1.0
+	 * Random number generator. Used if probabilities to choose a variant are smaller than 1.0
 	 */
 	private Random random;
 	/**
@@ -133,24 +133,22 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	@SuppressWarnings("unused")
 	private DeNovoSampler deNovoGenerator;
 	/**
-	 * Set of filters that will be used for each {@link VariantContext} read by
-	 * the {@link #reader}
+	 * Set of filters that will be used for each {@link VariantContext} read by the {@link #reader}
 	 */
 	private ImmutableSet<IFilter> filters;
 	/**
-	 * If list is set (not null) for each interval the {@link #reader} is
-	 * queried using the intervals and only such variants are parsed
+	 * If list is set (not null) for each interval the {@link #reader} is queried using the intervals and only such
+	 * variants are parsed
 	 */
 	private IntervalList intervals;
 	/**
-	 * Points to the actual interval in the interval list. If larger than
-	 * {@link IntervalList#size()} then variants from all intervals are parsed.
+	 * Points to the actual interval in the interval list. If larger than {@link IntervalList#size()} then variants from
+	 * all intervals are parsed.
 	 */
 	private int intervalPosition = 0;
 
 	/**
-	 * Default constructor initializing all fields. Can only be used by the
-	 * {@link Builder}.
+	 * Default constructor initializing all fields. Can only be used by the {@link Builder}.
 	 * 
 	 * @param reader
 	 *            {@link #probability}
@@ -164,6 +162,10 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 *            {@link #afIdentifier}
 	 * @param acIdentifier
 	 *            {@link #acIdentifier}
+	 * @param acHetIdentifier
+	 *            {@link #acHetIdentifier}
+	 * @param acHomIdentifier
+	 *            {@link #acHomIdentifier}
 	 * @param anIdentifier
 	 *            {@link #anIdentifier}
 	 * @param filters
@@ -179,15 +181,17 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 * @param sampleName
 	 */
 	private VCFSampler(VCFFileReader reader, double probability, Optional<String> sample, int variantsAmount,
-			String afIdentifier, String acIdentifier, String anIdentifier, ImmutableSet<IFilter> filters,
-			IntervalList intervals, DeNovoSampler deNovoSampler, List<Integer> selectAlleles, Random random,
-			String sampleName) {
+			String afIdentifier, String acIdentifier, String acHetIdentifier, String acHomIdentifier,
+			String anIdentifier, ImmutableSet<IFilter> filters, IntervalList intervals, DeNovoSampler deNovoSampler,
+			List<Integer> selectAlleles, Random random, String sampleName) {
 		this.reader = reader;
 		this.probability = probability;
 		this.sample = sample;
 		this.variantsAmount = variantsAmount;
 		this.afIdentifier = afIdentifier;
 		this.acIdentifier = acIdentifier;
+		this.acHetIdentifier = acHetIdentifier;
+		this.acHomIdentifier = acHomIdentifier;
 		this.anIdentifier = anIdentifier;
 		this.filters = filters;
 		this.intervals = intervals;
@@ -201,9 +205,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 	/**
 	 * 
-	 * Builder class of the {@link VCFSampler}. Checks if everything is set
-	 * correctly before building. The reader have to be set by using
-	 * {@link #vcfReader(VCFFileReader)}.
+	 * Builder class of the {@link VCFSampler}. Checks if everything is set correctly before building. The reader have
+	 * to be set by using {@link #vcfReader(VCFFileReader)}.
 	 * 
 	 * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
 	 *
@@ -236,13 +239,21 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		 */
 		private String acIdentifier = null;
 		/**
+		 * {@link VCFSampler#acHetIdentifier}
+		 */
+		private String acHetIdentifier = null;
+		/**
+		 * {@link VCFSampler#acHomIdentifier}
+		 */
+		private String acHomIdentifier = null;
+		/**
 		 * {@link VCFSampler#anIdentifier}
 		 */
 		private String anIdentifier = null;
 		/**
 		 * {@link VCFSampler#filters}
 		 */
-		private ImmutableSet<IFilter> filters = ImmutableSet.<IFilter>builder().build();
+		private ImmutableSet<IFilter> filters = ImmutableSet.<IFilter> builder().build();
 		/**
 		 * {@link VCFSampler#intervals}
 		 */
@@ -252,22 +263,20 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		 */
 		DeNovoSampler deNovoSampler;
 		/**
-		 * The seed to set the {@link Random} number generator for
-		 * {@link VCFSampler#random}
+		 * The seed to set the {@link Random} number generator for {@link VCFSampler#random}
 		 */
 		private long seed;
 		/**
-		 * If <code>true</code> {@link Random} is initialized with the given
-		 * seed. Otherwise the default {@link Random} constructor is used.
+		 * If <code>true</code> {@link Random} is initialized with the given seed. Otherwise the default {@link Random}
+		 * constructor is used.
 		 */
 		private boolean useSeed = false;
 
 		private String sampleName = "Sampled";
 
 		/**
-		 * Builder constructor. Please set at least the {@link #reader} using
-		 * {@link #vcfReader(VCFFileReader)}. {@link VCFSampler} can be build
-		 * running {@link #build()}.
+		 * Builder constructor. Please set at least the {@link #reader} using {@link #vcfReader(VCFFileReader)}.
+		 * {@link VCFSampler} can be build running {@link #build()}.
 		 */
 		public Builder() {
 		}
@@ -310,8 +319,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 		/**
 		 * @param probability
-		 *            The probability to select a variant. If set to 1 all
-		 *            variants will be selected.
+		 *            The probability to select a variant. If set to 1 all variants will be selected.
 		 * @return The builder with the initialized {@link #probability}
 		 */
 		public Builder probability(double probability) {
@@ -321,8 +329,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 		/**
 		 * @param sample
-		 *            If set the genotypes of this samples are selected. if null
-		 *            no sample is selected.
+		 *            If set the genotypes of this samples are selected. if null no sample is selected.
 		 * 
 		 * @return The builder with the initialized {@link #sample}
 		 */
@@ -343,8 +350,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 		/**
 		 * @param acIdentifier
-		 *            The identifier of the alt allele counts in the Info
-		 *            column.
+		 *            The identifier of the alt allele counts in the Info column.
 		 * @return The builder with the initialized {@link #acIdentifier}
 		 */
 		public Builder acIdentifier(String acIdentifier) {
@@ -363,10 +369,29 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		}
 
 		/**
+		 * @param acHetIdentifier
+		 *            The identifier of the heterozygouse number of alleles.
+		 * @return The builder with the initialized {@link #acHetIdentifier}
+		 */
+		public Builder acHetIdentifier(String acHetIdentifier) {
+			this.acHetIdentifier = acHetIdentifier;
+			return this;
+		}
+
+		/**
+		 * @param acHomIdentifier
+		 *            The identifier of the homozygouse number of alleles.
+		 * @return The builder with the initialized {@link #acHomIdentifier}
+		 */
+		public Builder acHomIdentifier(String acHomIdentifier) {
+			this.acHomIdentifier = acHomIdentifier;
+			return this;
+		}
+
+		/**
 		 * @param variantsAmount
-		 *            The maximum number of variants that should be selected by
-		 *            the sampler. If set to smaller than 1 this option is of
-		 *            and there will be no maximum limit used.
+		 *            The maximum number of variants that should be selected by the sampler. If set to smaller than 1
+		 *            this option is of and there will be no maximum limit used.
 		 * @return The builder with the initialized {@link #variantsAmount}
 		 */
 		public Builder variantsAmount(int variantsAmount) {
@@ -376,8 +401,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 		/**
 		 * @param intervals
-		 *            For each interval the {@link #reader} is queried using the
-		 *            intervals and only such variants are parsed
+		 *            For each interval the {@link #reader} is queried using the intervals and only such variants are
+		 *            parsed
 		 * @return The builder with the initialized {@link #intervals}
 		 */
 		public Builder intervals(IntervalList intervals) {
@@ -396,8 +421,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 		/**
 		 * @param filters
-		 *            Set of filters that will be used for each
-		 *            {@link VariantContext} read by the
+		 *            Set of filters that will be used for each {@link VariantContext} read by the
 		 *            {@link VCFFileReader#reader}
 		 * @return The builder with the initialized {@link #filters}
 		 */
@@ -408,8 +432,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 		/**
 		 * @param seed
-		 *            The seed to set the {@link Random} number generator for
-		 *            {@link VCFSampler#random}
+		 *            The seed to set the {@link Random} number generator for {@link VCFSampler#random}
 		 * @return The builder with the initialized {@link #seed}
 		 */
 		public Builder seed(long seed) {
@@ -419,9 +442,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		}
 
 		/**
-		 * Build the {@link VCFSampler}. Important: the {@link #reader} have to
-		 * be initialized using {@link #file(File)}, {@link #file(String)} or
-		 * {@link #vcfReader(VCFFileReader)}.
+		 * Build the {@link VCFSampler}. Important: the {@link #reader} have to be initialized using
+		 * {@link #file(File)}, {@link #file(String)} or {@link #vcfReader(VCFFileReader)}.
 		 * 
 		 * @return The created {@link VCFSampler}.
 		 */
@@ -432,21 +454,35 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				throw new RuntimeException("No variants are set for the sampler: The reader cannot be null");
 
 			// do not use it if one of them is not set!
-			if (acIdentifier == null || anIdentifier == null) {
+			if (anIdentifier != null) {
+				if (acIdentifier != null) {
+					acHetIdentifier = null;
+					acHomIdentifier = null;
+				} else if (acHetIdentifier != null && acHomIdentifier != null)
+					acIdentifier = null;
+				else {
+					acIdentifier = null;
+					anIdentifier = null;
+					acHetIdentifier = null;
+					acHomIdentifier = null;
+				}
+			} else {
 				acIdentifier = null;
 				anIdentifier = null;
+				acHetIdentifier = null;
+				acHomIdentifier = null;
 			}
 
 			// check if identifiers are present
-
-			List<String> ids = Lists.newArrayList(acIdentifier, anIdentifier, afIdentifier);
+			List<String> ids = Lists.newArrayList(acIdentifier, anIdentifier, afIdentifier, acHetIdentifier,
+					acHomIdentifier);
 			ids.removeIf(Objects::isNull);
 			for (String id : ids) {
 				if (reader.getFileHeader().getInfoHeaderLine(id) == null) {
 					throw new InfoIDNotFoundException(id);
 				}
 			}
-			
+
 			Random random;
 			if (useSeed)
 				random = new Random(seed);
@@ -461,10 +497,9 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				setCounts(counter.getCounts(), random);
 			}
 
-			
-
-			return new VCFSampler(reader, probability, sample, variantsAmount, afIdentifier, acIdentifier, anIdentifier,
-					filters, intervals, deNovoSampler, selectAlleles, random, sampleName);
+			return new VCFSampler(reader, probability, sample, variantsAmount, afIdentifier, acIdentifier,
+					acHetIdentifier, acHomIdentifier, anIdentifier, filters, intervals, deNovoSampler, selectAlleles,
+					random, sampleName);
 		}
 
 		private void setCounts(int counts, Random random) {
@@ -488,10 +523,9 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	}
 
 	/**
-	 * Returns the iterator. If {@link #iterator} is <code>null</code> then the
-	 * iterator of the {@link #reader} will be set. But if intervals are used is
-	 * generates with {@link #getNextIntervalInterator()} the iterator querying
-	 * the next interval.
+	 * Returns the iterator. If {@link #iterator} is <code>null</code> then the iterator of the {@link #reader} will be
+	 * set. But if intervals are used is generates with {@link #getNextIntervalInterator()} the iterator querying the
+	 * next interval.
 	 * 
 	 * @return The actual VCF file iterator.
 	 */
@@ -530,8 +564,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	}
 
 	/**
-	 * Has next can be true, but next can give back null! But it is important to
-	 * set the next iterator.
+	 * Has next can be true, but next can give back null! But it is important to set the next iterator.
 	 * 
 	 * @return boolean
 	 */
@@ -660,7 +693,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 	private Map<Integer, Boolean> useAlleles(VariantContext candidate) {
 		Map<Integer, Boolean> candidates = new HashMap<Integer, Boolean>();
-		
+
 		if (useAF()) {// AF flag
 			Object af = candidate.getCommonInfo().getAttribute(getAFIdentifier());
 			if (af instanceof ArrayList<?>) {
@@ -696,7 +729,30 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				addCandidateByHardyWeinberg(candidates, 0,
 						(double) candidate.getCommonInfo().getAttributeAsInt(getACIdentifier(), 0) / (double) an);
 			}
-
+		} else if (useACHetHom()) {
+			Object acHet = candidate.getCommonInfo().getAttribute(getACHetIdentifier());
+			Object acHom = candidate.getCommonInfo().getAttribute(getACHomIdentifier());
+			int an = candidate.getCommonInfo().getAttributeAsInt(getANIdentifier(), 0);
+			double anIndividuals = an/2.0;
+			if (acHet instanceof ArrayList<?> && acHom instanceof ArrayList<?>) {
+				if (((ArrayList<?>) acHet).get(0) instanceof String
+						&& ((ArrayList<?>) acHom).get(0) instanceof String) {
+					int i = 0;
+					for (Object oHom : (ArrayList<?>) acHom) {
+						Object oHet = ((ArrayList<?>) acHet).get(i);
+						addCandidate(candidates, i, new double[] { Double.parseDouble((String) oHom) / anIndividuals,
+								Double.parseDouble((String) oHet) / anIndividuals });
+						i++;
+					}
+				}
+				// Problems with multiple alleles. This tears them down to only two alleles!
+				if (countAlleles(candidates) > 2)
+					candidates = selectedMaxTwoAlleles(candidates);
+			} else {
+				addCandidate(candidates, 0, new double[] {
+						(double) candidate.getCommonInfo().getAttributeAsInt(getACHomIdentifier(), 0) / anIndividuals,
+						(double) candidate.getCommonInfo().getAttributeAsInt(getACHetIdentifier(), 0) / anIndividuals});
+			}
 		} else if (useCounts()) { // variantsAmount > 0
 			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++) {
 				this.position++;
@@ -714,11 +770,11 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	}
 
 	private Map<Integer, Boolean> selectedMaxTwoAlleles(Map<Integer, Boolean> candidates) {
-		Map<Integer, Boolean>  output = new HashMap<>();
+		Map<Integer, Boolean> output = new HashMap<>();
 		int count = 0;
 		List<Integer> integers = Lists.newArrayList(candidates.keySet());
-		Collections.shuffle(integers,random);
-		
+		Collections.shuffle(integers, random);
+
 		for (Integer genotype : integers) {
 			if (count == 2)
 				return output;
@@ -730,7 +786,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				count += alleles;
 				output.put(genotype, candidates.get(genotype));
 			}
-				
+
 		}
 		return output;
 	}
@@ -741,7 +797,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 			if (hom)
 				i += 2;
 			else
-				i+=1;
+				i += 1;
 		}
 		return i;
 	}
@@ -750,8 +806,16 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		return getACIdentifier() != null && getANIdentifier() != null;
 	}
 
+	private boolean useACHetHom() {
+		return getACHetIdentifier() != null && getACHomIdentifier() != null && getANIdentifier() != null;
+	}
+
 	private void addCandidateByHardyWeinberg(Map<Integer, Boolean> candidates, int i, double af) {
 		double[] homHetAF = getHardyWeinbergPrincipleHomhet(af);
+		addCandidate(candidates, i, homHetAF);
+	}
+
+	private void addCandidate(Map<Integer, Boolean> candidates, int i, double[] homHetAF) {
 		double random = nextDouble();
 		if (random <= homHetAF[0])
 			candidates.put(i, true);
@@ -772,7 +836,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	}
 
 	/**
-	 * Getter of the {@link #sample}. 
+	 * Getter of the {@link #sample}.
 	 * 
 	 * @return The set sample
 	 */
@@ -794,13 +858,12 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	/**
 	 * Get the sample name stored in {@link #sample} of the new samples.
 	 * 
-	 * @return The sample name. if no name is set the default name is
-	 *         {@link VCFSampler#sampleName}.
+	 * @return The sample name. if no name is set the default name is {@link VCFSampler#sampleName}.
 	 */
 	public ImmutableSet<String> getSampleNames() {
 		if (!getSample().isPresent())
-			return ImmutableSet.<String>builder().add(sampleName).build();
-		return ImmutableSet.<String>builder().add(getSample().get()).build();
+			return ImmutableSet.<String> builder().add(sampleName).build();
+		return ImmutableSet.<String> builder().add(getSample().get()).build();
 	}
 
 	public int getVariantsAmount() {
@@ -826,6 +889,14 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 	public String getACIdentifier() {
 		return acIdentifier;
+	}
+
+	public String getACHetIdentifier() {
+		return acHetIdentifier;
+	}
+
+	public String getACHomIdentifier() {
+		return acHomIdentifier;
 	}
 
 	public String getANIdentifier() {

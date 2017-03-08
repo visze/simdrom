@@ -65,7 +65,9 @@ public class Main {
 		backgroundSamplerBuilder = backgroundSamplerBuilder
 				.afIdentifier(SIMdromSetting.BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER)
 				.acIdentifier(SIMdromSetting.BACKGROUND_ALT_ALLELE_COUNT)
-				.anIdentifier(SIMdromSetting.BACKGROUND_ALLELE_COUNT);
+				.anIdentifier(SIMdromSetting.BACKGROUND_ALLELE_COUNT)
+				.acHetIdentifier(SIMdromSetting.BACKGROUND_HET_ALLELE_COUNT)
+				.acHomIdentifier(SIMdromSetting.BACKGROUND_HOM_ALLELE_COUNT);
 
 		backgroundSamplerBuilder = backgroundSamplerBuilder.variantsAmount(SIMdromSetting.BACKGROUND_VARIANT_NUMBER);
 
@@ -106,7 +108,9 @@ public class Main {
 			mutationSamplerBuilder = mutationSamplerBuilder
 					.afIdentifier(SIMdromSetting.MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER)
 					.acIdentifier(SIMdromSetting.MUTATIONS_ALT_ALLELE_COUNT)
-					.anIdentifier(SIMdromSetting.MUTATIONS_ALLELE_COUNT);
+					.anIdentifier(SIMdromSetting.MUTATIONS_ALLELE_COUNT)
+					.acHetIdentifier(SIMdromSetting.MUTATIONS_HET_ALLELE_COUNT)
+					.acHomIdentifier(SIMdromSetting.MUTATIONS_HOM_ALLELE_COUNT);
 
 			mutationSamplerBuilder = mutationSamplerBuilder.variantsAmount(SIMdromSetting.MUTATIONS_VARIANT_NUMBER);
 
