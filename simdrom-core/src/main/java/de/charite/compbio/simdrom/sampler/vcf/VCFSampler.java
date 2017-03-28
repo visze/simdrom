@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableSet;
@@ -23,6 +24,7 @@ import com.google.common.collect.MoreCollectors;
 
 import de.charite.compbio.simdrom.exception.InfoIDNotFoundException;
 import de.charite.compbio.simdrom.filter.IFilter;
+import de.charite.compbio.simdrom.filter.RemoveGonosomesFilter;
 import de.charite.compbio.simdrom.sampler.DeNovoSampler;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.util.CloseableIterator;
@@ -72,6 +74,10 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 * The default sample name for genotypes in the VCF.
 	 */
 	private String sampleName;
+	/**
+	 * The sex of the sampled individual
+	 */
+	private Sex sex;
 	/**
 	 * The probability to select a variant. If set to 1 all variants will be selected.
 	 */
@@ -179,11 +185,12 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 * @param random
 	 *            {@link #random}
 	 * @param sampleName
+	 *            {@link #sampleName}
 	 */
 	private VCFSampler(VCFFileReader reader, double probability, Optional<String> sample, int variantsAmount,
 			String afIdentifier, String acIdentifier, String acHetIdentifier, String acHomIdentifier,
 			String anIdentifier, ImmutableSet<IFilter> filters, IntervalList intervals, DeNovoSampler deNovoSampler,
-			List<Integer> selectAlleles, Random random, String sampleName) {
+			List<Integer> selectAlleles, Random random, String sampleName, Sex sex) {
 		this.reader = reader;
 		this.probability = probability;
 		this.sample = sample;
@@ -199,6 +206,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		this.deNovoGenerator = deNovoSampler;
 		this.random = random;
 		this.sampleName = sampleName;
+		this.sex = sex;
 
 		next();
 	}
@@ -212,6 +220,11 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 *
 	 */
 	public static final class Builder {
+
+		/**
+		 * See {@link VCFSampler#sex}
+		 */
+		private Optional<Sex> sex = Optional.empty();
 
 		/**
 		 * See {@link VCFSampler#reader}
@@ -400,6 +413,18 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		}
 
 		/**
+		 * @param sex
+		 *            The sex of the individual that should be sampled. Only important if Allele frequencies or allele
+		 *            counts are used. For male X-hom alt and Y are sampled. For females only X. If set to
+		 *            {@links Sex#UNKNOWN} no gonosomes will be sampled!
+		 * @return The builder with the initialized {@link #sex}
+		 */
+		public Builder sex(Sex sex) {
+			this.sex = Optional.of(sex);
+			return this;
+		}
+
+		/**
 		 * @param intervals
 		 *            For each interval the {@link #reader} is queried using the intervals and only such variants are
 		 *            parsed
@@ -489,6 +514,19 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 			else
 				random = new Random();
 
+			// Random sex if not set
+			if (!sex.isPresent())
+				sex = Optional.of(random.nextBoolean() ? Sex.MALE : Sex.FEMALE);
+
+			// set sex to unknown if no sample is selected and remove then all gonosomes
+			if (sample.isPresent()) {
+				sex = Optional.of(Sex.UNKNOWN);
+			}
+
+			// remove gonosomes if sex is none
+			if (sex.get() == Sex.NONE)
+				filters = ImmutableSet.<IFilter> builder().add(new RemoveGonosomesFilter()).addAll(filters).build();
+
 			if (variantsAmount < 0)
 				variantsAmount = 0;
 			else if (variantsAmount > 0) {
@@ -499,7 +537,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 			return new VCFSampler(reader, probability, sample, variantsAmount, afIdentifier, acIdentifier,
 					acHetIdentifier, acHomIdentifier, anIdentifier, filters, intervals, deNovoSampler, selectAlleles,
-					random, sampleName);
+					random, sampleName, sex.get());
 		}
 
 		private void setCounts(int counts, Random random) {
@@ -700,7 +738,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				if (((ArrayList<?>) af).get(0) instanceof String) {
 					int i = 0;
 					for (Object o : (ArrayList<?>) af) {
-						addCandidateByHardyWeinberg(candidates, i, Double.parseDouble((String) o));
+						addPossibleCandidateAllele(candidates, i,
+								getCandidateByHardyWeinberg(candidate.getContig(), Double.parseDouble((String) o)));
 						i++;
 					}
 				}
@@ -708,8 +747,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				if (countAlleles(candidates) > 2)
 					candidates = selectedMaxTwoAlleles(candidates);
 			} else {
-				addCandidateByHardyWeinberg(candidates, 0,
-						candidate.getCommonInfo().getAttributeAsDouble(getAFIdentifier(), 0.0));
+				addPossibleCandidateAllele(candidates, 0, getCandidateByHardyWeinberg(candidate.getContig(),
+						candidate.getCommonInfo().getAttributeAsDouble(getAFIdentifier(), 0.0)));
 			}
 		} else if (useAC()) {
 			Object ac = candidate.getCommonInfo().getAttribute(getACIdentifier());
@@ -718,7 +757,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				if (((ArrayList<?>) ac).get(0) instanceof String) {
 					int i = 0;
 					for (Object o : (ArrayList<?>) ac) {
-						addCandidateByHardyWeinberg(candidates, i, Double.parseDouble((String) o) / (double) an);
+						addPossibleCandidateAllele(candidates, i, getCandidateByHardyWeinberg(
+								candidate.getContig(), Double.parseDouble((String) o) / (double) an));
 						i++;
 					}
 				}
@@ -726,22 +766,23 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				if (countAlleles(candidates) > 2)
 					candidates = selectedMaxTwoAlleles(candidates);
 			} else {
-				addCandidateByHardyWeinberg(candidates, 0,
-						(double) candidate.getCommonInfo().getAttributeAsInt(getACIdentifier(), 0) / (double) an);
+				addPossibleCandidateAllele(candidates, 0, getCandidateByHardyWeinberg(candidate.getContig(),
+						(double) candidate.getCommonInfo().getAttributeAsInt(getACIdentifier(), 0) / (double) an));
 			}
 		} else if (useACHetHom()) {
 			Object acHet = candidate.getCommonInfo().getAttribute(getACHetIdentifier());
 			Object acHom = candidate.getCommonInfo().getAttribute(getACHomIdentifier());
 			int an = candidate.getCommonInfo().getAttributeAsInt(getANIdentifier(), 0);
-			double anIndividuals = an/2.0;
+			double anIndividuals = an / 2.0;
 			if (acHet instanceof ArrayList<?> && acHom instanceof ArrayList<?>) {
 				if (((ArrayList<?>) acHet).get(0) instanceof String
 						&& ((ArrayList<?>) acHom).get(0) instanceof String) {
 					int i = 0;
 					for (Object oHom : (ArrayList<?>) acHom) {
 						Object oHet = ((ArrayList<?>) acHet).get(i);
-						addCandidate(candidates, i, new double[] { Double.parseDouble((String) oHom) / anIndividuals,
-								Double.parseDouble((String) oHet) / anIndividuals });
+						addPossibleCandidateAllele(candidates, i,
+								getCandidate(new double[] { Double.parseDouble((String) oHom) / anIndividuals,
+										Double.parseDouble((String) oHet) / anIndividuals }));
 						i++;
 					}
 				}
@@ -749,24 +790,57 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				if (countAlleles(candidates) > 2)
 					candidates = selectedMaxTwoAlleles(candidates);
 			} else {
-				addCandidate(candidates, 0, new double[] {
-						(double) candidate.getCommonInfo().getAttributeAsInt(getACHomIdentifier(), 0) / anIndividuals,
-						(double) candidate.getCommonInfo().getAttributeAsInt(getACHetIdentifier(), 0) / anIndividuals});
+				addPossibleCandidateAllele(candidates, 0,
+						getCandidate(new double[] {
+								(double) candidate.getCommonInfo().getAttributeAsInt(getACHomIdentifier(), 0)
+										/ anIndividuals,
+								(double) candidate.getCommonInfo().getAttributeAsInt(getACHetIdentifier(), 0)
+										/ anIndividuals }));
 			}
 		} else if (useCounts()) { // variantsAmount > 0
 			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++) {
 				this.position++;
 				if (selectAlleles.contains(position))
-					candidates.put(i, nextDouble() <= 0.5);
+					candidates.put(i, nextDouble() <= 0.5); // FIXME why double here? hom het?
 			}
 
 		} else { // probability
-			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++) {
-				addCandidateByHardyWeinberg(candidates, 0, getProbability());
-			}
+			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++)
+				addPossibleCandidateAllele(candidates, i,
+						getCandidateByHardyWeinberg(candidate.getContig(), getProbability()));
+			// Problems with multiple alleles. This tears them down to only two alleles!
+			if (countAlleles(candidates) > 2)
+				candidates = selectedMaxTwoAlleles(candidates);
 		}
 		return candidates;
 
+	}
+
+	/**
+	 * @param contig
+	 * @return
+	 */
+	private boolean onX(String contig) {
+		return contig.matches("chr23|chrX|Chr23|ChrX|X|x|23|chrx|Chrx");
+	}
+
+	/**
+	 * @param contig
+	 * @return
+	 */
+	private boolean onY(String contig) {
+		return contig.matches("chr24|chrY|Chr24|ChrY|Y|y|24|chry|Chry");
+	}
+
+	/**
+	 * @param candidates
+	 * @param i
+	 * @param candidate
+	 */
+	private void addPossibleCandidateAllele(Map<Integer, Boolean> candidates, int i,
+			Optional<Boolean> candidateAllele) {
+		if (candidateAllele.isPresent())
+			candidates.put(i, candidateAllele.get());
 	}
 
 	private Map<Integer, Boolean> selectedMaxTwoAlleles(Map<Integer, Boolean> candidates) {
@@ -810,17 +884,73 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		return getACHetIdentifier() != null && getACHomIdentifier() != null && getANIdentifier() != null;
 	}
 
-	private void addCandidateByHardyWeinberg(Map<Integer, Boolean> candidates, int i, double af) {
-		double[] homHetAF = getHardyWeinbergPrincipleHomhet(af);
-		addCandidate(candidates, i, homHetAF);
+	private Optional<Boolean> getCandidateByHardyWeinberg(String contig, double af) {
+		boolean onX = onX(contig);
+		boolean onY = onY(contig);
+		double[] homHetAF;
+		if (onX | onY) {
+
+			switch (sex) {
+			case MALE:
+				if (onX)
+					homHetAF = getHardyWeinbergPrincipleMaleXHom(af);
+				else
+					homHetAF = getHardyWeinbergPrincipleMaleYHom(af);
+				break;
+
+			case FEMALE:
+				if (onX)
+					homHetAF = getHardyWeinbergPrincipleFemaleXHomhet(af);
+				else
+					homHetAF = new double[]{-1,-1};
+				break;
+
+			case UNKNOWN:
+				if (onX)
+					homHetAF = (random.nextBoolean() ? getHardyWeinbergPrincipleMaleXHom(af) : getHardyWeinbergPrincipleFemaleXHomhet(af));
+				else
+					homHetAF = (random.nextBoolean() ? getHardyWeinbergPrincipleMaleYHom(af) : new double[]{-1,-1});
+				break;
+			case NONE:
+
+				return Optional.empty();
+			}
+		}
+		homHetAF = getHardyWeinbergPrincipleHomhet(af);
+		return getCandidate(homHetAF);
 	}
 
-	private void addCandidate(Map<Integer, Boolean> candidates, int i, double[] homHetAF) {
+	/**
+	 * @param af
+	 * @return
+	 */
+	private double[] getHardyWeinbergPrincipleFemaleXHomhet(double af) {
+		return new double[] { Math.pow(1.0 - Math.sqrt(1.0 - af), 2), af };
+	}
+
+	/**
+	 * @param af
+	 * @return
+	 */
+	private double[] getHardyWeinbergPrincipleMaleYHom(double af) {
+		return new double[] { af, af };
+	}
+
+	/**
+	 * @param af
+	 * @return
+	 */
+	private double[] getHardyWeinbergPrincipleMaleXHom(double af) {
+		return new double[] { af, af };
+	}
+
+	private Optional<Boolean> getCandidate(double[] homHetAF) {
 		double random = nextDouble();
 		if (random <= homHetAF[0])
-			candidates.put(i, true);
+			return Optional.of(true);
 		else if (random <= homHetAF[1])
-			candidates.put(i, false);
+			return Optional.of(false);
+		return Optional.empty();
 	}
 
 	private double[] getHardyWeinbergPrincipleHomhet(double af) {
