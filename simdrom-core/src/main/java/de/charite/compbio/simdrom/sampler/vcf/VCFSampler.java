@@ -783,6 +783,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				double altAF = (double) candidate.getCommonInfo().getAttributeAsInt(getACIdentifier(), 0) / (double) an;
 				afs = new double[] { 1.0 - altAF, altAF };
 			}
+			candidates = getCandidateByHardyWeinberg(candidate.getContig(), afs);
 		} else if (useACHetHom()) {
 			Object acHet = candidate.getCommonInfo().getAttribute(getACHetIdentifier());
 			Object acHom = candidate.getCommonInfo().getAttribute(getACHomIdentifier());
@@ -1038,7 +1039,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		int pos = 0;
 		for (int i = 0; i < homHetProbs[0].length; i++) {
 			for (int j = i + 1; j < homHetProbs[0].length; j++) {
-				sum += homHetProbs[0][pos];
+				sum += homHetProbs[1][pos];
 				if (random <= sum)
 					return Optional.of(new int[] { i, j });
 				pos++;
