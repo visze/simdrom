@@ -114,7 +114,7 @@ public class VCFSamplerTest {
 			samplerProb.next();
 			count++;
 		}
-		assertEquals(53, count);
+		assertEquals(50, count);
 
 		count = 0;
 		while (samplerProb_interval.hasNext()) {
@@ -142,14 +142,14 @@ public class VCFSamplerTest {
 			samplerAF.next();
 			count++;
 		}
-		assertEquals(1, count);
+		assertEquals(2, count);
 
 		count = 0;
 		while (samplerAC_AN.hasNext()) {
 			samplerAC_AN.next();
 			count++;
 		}
-		assertEquals(1, count);
+		assertEquals(0, count);
 
 		count = 0;
 		while (samplerSample.hasNext()) {
