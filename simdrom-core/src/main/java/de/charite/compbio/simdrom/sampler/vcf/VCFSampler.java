@@ -918,7 +918,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 			// hemi male
 			double sum = 0;
 			double[] afsHemi = new double[acAltHemiList.size() + 1];
-			for (int i = 0; i < afsHemi.length; i++) {
+			for (int i = 0; i < acAltHemiList.size(); i++) {
 				afsHemi[i + 1] = (double) acAltHemiList.get(i) / (double) (an - acHetHom);
 				sum += afsHemi[i + 1];
 
@@ -927,10 +927,12 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 			// female
 			sum = 0;
 			double[] afsHom = new double[acAltHomList.size() + 1];
-			double[] afsHet = new double[IntMath.binomial(acAltHomList.size(), 2)];
+			double[] afsHet = new double[IntMath.binomial(acAltHomList.size()+1, 2)];
 			int pos = 0;
-			for (int i = 0; i < afsHom.length; i++) {
-				for (int j = i; i < afsHom.length; j++) {
+			for (int i = -1; i < acAltHomList.size(); i++) {
+				for (int j = i; j < acAltHomList.size(); j++) {
+					if (i == -1 && j == -1) //skip ref
+						continue;
 					if (i == j) {
 						afsHom[i + 1] = (double) acAltHomList.get(i) / (double) (an - acHemi);
 						sum += afsHom[i + 1];
@@ -974,15 +976,16 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		} else {
 			double sum = 0;
 			double[] afsHom = new double[acAltHomList.size() + 1];
-			double[] afsHet = new double[IntMath.binomial(acAltHomList.size(), 2)];
+			double[] afsHet = new double[IntMath.binomial(acAltHomList.size()+1, 2)];
 			double[] afsHemi = new double[0];
 			int pos = 0;
-			for (int i = 0; i < afsHom.length; i++) {
-				for (int j = i; i < afsHom.length; j++) {
+			for (int i = -1; i < acAltHomList.size(); i++) {
+				for (int j = i; j < acAltHomList.size(); j++) {
+					if (i == -1 && j == -1) //skip ref
+						continue;
 					if (i == j) {
 						afsHom[i + 1] = (double) acAltHomList.get(i) / (double) an;
 						sum += afsHom[i + 1];
-
 					} else {
 						afsHet[pos] = (double) acAltHetList.get(pos) / (double) an;
 						sum += afsHet[pos];
