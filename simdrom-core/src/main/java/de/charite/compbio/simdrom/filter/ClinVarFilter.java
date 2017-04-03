@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Sets;
@@ -101,12 +102,14 @@ public class ClinVarFilter extends AFilter {
 					for (Integer sig : sigs_dbs_ids.keySet()) {
 						for (String db : sigs_dbs_ids.get(sig).keySet()) {
 							for (String id : sigs_dbs_ids.get(sig).get(db)) {
-								dbAttributes.put(db, id);
+								dbAttributes.put(db, id.replaceAll("\\s",""));
 							}
 
 						}
 					}
-					builder = builder.attributes(dbAttributes.asMap());
+					for (String key : dbAttributes.keySet()) {
+						builder = builder.attribute(key, dbAttributes.get(key).stream().collect(Collectors.toList()));
+					}
 					builder = builder.attribute("CLNSIG", sigs_dbs_ids.keySet());
 					return Optional.of(builder.make());
 				}
