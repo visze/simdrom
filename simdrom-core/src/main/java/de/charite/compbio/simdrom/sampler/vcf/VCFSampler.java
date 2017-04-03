@@ -7,15 +7,12 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableSet;
@@ -725,7 +722,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				}
 			}
 			if (onlyRef)
-				return  Optional.empty();
+				return Optional.empty();
 			return Optional.of(new VariantContextBuilder(candidate)
 					.genotypes(createGenotype(candidate.getAlleles(), alleles)).make());
 		}
@@ -882,50 +879,6 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		return contig.matches("chr24|chrY|Chr24|ChrY|Y|y|24|chry|Chry");
 	}
 
-	/**
-	 * @param candidates
-	 * @param i
-	 * @param candidate
-	 */
-	private void addPossibleCandidateAllele(Map<Integer, Boolean> candidates, int i,
-			Optional<Boolean> candidateAllele) {
-		if (candidateAllele.isPresent())
-			candidates.put(i, candidateAllele.get());
-	}
-
-	private Map<Integer, Boolean> selectedMaxTwoAlleles(Map<Integer, Boolean> candidates) {
-		Map<Integer, Boolean> output = new HashMap<>();
-		int count = 0;
-		List<Integer> integers = Lists.newArrayList(candidates.keySet());
-		Collections.shuffle(integers, random);
-
-		for (Integer genotype : integers) {
-			if (count == 2)
-				return output;
-			int alleles = (candidates.get(genotype) ? 2 : 1);
-			if (count + alleles > 2) {
-				count += 1;
-				output.put(genotype, false);
-			} else {
-				count += alleles;
-				output.put(genotype, candidates.get(genotype));
-			}
-
-		}
-		return output;
-	}
-
-	private int countAlleles(Map<Integer, Boolean> candidates) {
-		int i = 0;
-		for (Boolean hom : candidates.values()) {
-			if (hom)
-				i += 2;
-			else
-				i += 1;
-		}
-		return i;
-	}
-
 	private boolean useAC() {
 		return getACIdentifier() != null && getANIdentifier() != null;
 	}
@@ -937,30 +890,30 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	private Optional<int[]> getCandidateByHardyWeinberg(String contig, double[] af) {
 		boolean onX = onX(contig);
 		boolean onY = onY(contig);
-		double[][] homHetProbs;
+		double[][] homHetHemiProbs;
 		if (onX | onY) {
 
 			switch (sex) {
 			case MALE:
 				if (onX)
-					homHetProbs = getHardyWeinbergPrincipleMaleXHom(af);
+					homHetHemiProbs = getHardyWeinbergPrincipleMaleXHemi(af);
 				else
-					homHetProbs = getHardyWeinbergPrincipleMaleYHom(af);
+					homHetHemiProbs = getHardyWeinbergPrincipleMaleYHemi(af);
 				break;
 
 			case FEMALE:
 				if (onX)
-					homHetProbs = getHardyWeinbergPrincipleFemaleXHomhet(af);
+					homHetHemiProbs = getHardyWeinbergPrincipleFemaleXHomHet(af);
 				else
-					homHetProbs = new double[][] { new double[0], new double[0] };
+					homHetHemiProbs = new double[][] { new double[0], new double[0] };
 				break;
 
 			case UNKNOWN:
 				if (onX)
-					homHetProbs = (random.nextBoolean() ? getHardyWeinbergPrincipleMaleXHom(af)
-							: getHardyWeinbergPrincipleFemaleXHomhet(af));
+					homHetHemiProbs = (random.nextBoolean() ? getHardyWeinbergPrincipleMaleXHemi(af)
+							: getHardyWeinbergPrincipleFemaleXHomHet(af));
 				else
-					homHetProbs = (random.nextBoolean() ? getHardyWeinbergPrincipleMaleYHom(af)
+					homHetHemiProbs = (random.nextBoolean() ? getHardyWeinbergPrincipleMaleYHemi(af)
 							: new double[][] { new double[0], new double[0] });
 				break;
 			case NONE:
@@ -969,16 +922,44 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 			}
 		}
 
-		homHetProbs = getHardyWeinbergPrincipleHomhet(af);
+		homHetHemiProbs = getHardyWeinbergPrincipleHomHet(af);
 
-		return getCandidate(homHetProbs);
+		return getCandidate(homHetHemiProbs);
 	}
 
 	/**
 	 * @param af
 	 * @return
 	 */
-	private double[][] getHardyWeinbergPrincipleFemaleXHomhet(double[] af) {
+	private double[][] getHardyWeinbergPrincipleFemaleXHomHet(double[] af) {
+		return getHardyWeinbergPrincipleHomHet(af);
+	}
+
+	/**
+	 * @param af
+	 * @return
+	 */
+	private double[][] getHardyWeinbergPrincipleMaleYHemi(double[] af) {
+		return getHardyWeinbergPrincipleHemi(af);
+	}
+
+	/**
+	 * @param af
+	 * @return
+	 */
+	private double[][] getHardyWeinbergPrincipleMaleXHemi(double[] af) {
+		return getHardyWeinbergPrincipleHemi(af);
+	}
+
+	private double[][] getHardyWeinbergPrincipleHemi(double[] af) {
+		double[] hemi = new double[af.length];
+		for (int i = 0; i < af.length; i++) {
+			hemi[i] = af[i];
+		}
+		return new double[][] { new double[0], new double[0], hemi };
+	}
+
+	private double[][] getHardyWeinbergPrincipleHomHet(double[] af) {
 		double[] homs = new double[af.length];
 		double[] hets = new double[IntMath.binomial(af.length, 2)];
 		for (int i = 0; i < af.length; i++) {
@@ -989,78 +970,36 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				hets[i] = 2.0 * af[i] * af[j];
 			}
 		}
-		return new double[][] { homs, hets };
+		return new double[][] { homs, hets, new double[0] };
 	}
 
-	/**
-	 * @param af
-	 * @return
-	 */
-	private double[][] getHardyWeinbergPrincipleMaleYHom(double[] af) {
-		double[] homs = new double[af.length];
-		double[] hets = new double[IntMath.binomial(af.length, 2)];
-		for (int i = 0; i < af.length; i++) {
-			homs[i] = Math.pow(af[i], 2);
-		}
-		for (int i = 0; i < af.length; i++) {
-			for (int j = i + 1; j < af.length; j++) {
-				hets[i] = 2.0 * af[i] * af[j];
-			}
-		}
-		return new double[][] { homs, hets };
-	}
-
-	/**
-	 * @param af
-	 * @return
-	 */
-	private double[][] getHardyWeinbergPrincipleMaleXHom(double[] af) {
-		double[] homs = new double[af.length];
-		double[] hets = new double[IntMath.binomial(af.length, 2)];
-		for (int i = 0; i < af.length; i++) {
-			homs[i] = Math.pow(af[i], 2);
-		}
-		for (int i = 0; i < af.length; i++) {
-			for (int j = i + 1; j < af.length; j++) {
-				hets[i] = 2.0 * af[i] * af[j];
-			}
-		}
-		return new double[][] { homs, hets };
-	}
-
-	private Optional<int[]> getCandidate(double[][] homHetProbs) {
+	private Optional<int[]> getCandidate(double[][] homHetHemiProbs) {
 		double random = nextDouble();
 		double sum = 0.0;
-		for (int i = 0; i < homHetProbs[0].length; i++) {
-			sum += homHetProbs[0][i];
+		// hom
+		for (int i = 0; i < homHetHemiProbs[0].length; i++) {
+			sum += homHetHemiProbs[0][i];
 			if (random <= sum)
 				return Optional.of(new int[] { i, i });
 		}
+		// het
 		int pos = 0;
-		for (int i = 0; i < homHetProbs[0].length; i++) {
-			for (int j = i + 1; j < homHetProbs[0].length; j++) {
-				sum += homHetProbs[1][pos];
+		for (int i = 0; i < homHetHemiProbs[0].length; i++) {
+			for (int j = i + 1; j < homHetHemiProbs[0].length; j++) {
+				sum += homHetHemiProbs[1][pos];
 				if (random <= sum)
 					return Optional.of(new int[] { i, j });
 				pos++;
 
 			}
 		}
+		// hemi
+		for (int i = 0; i < homHetHemiProbs[2].length; i++) {
+			sum += homHetHemiProbs[2][i];
+			if (random <= sum)
+				return Optional.of(new int[] { i });
+		}
 		return Optional.empty();
-	}
-
-	private double[][] getHardyWeinbergPrincipleHomhet(double[] af) {
-		double[] homs = new double[af.length];
-		double[] hets = new double[IntMath.binomial(af.length, 2)];
-		for (int i = 0; i < af.length; i++) {
-			homs[i] = Math.pow(af[i], 2);
-		}
-		for (int i = 0; i < af.length; i++) {
-			for (int j = i + 1; j < af.length; j++) {
-				hets[i] = 2.0 * af[i] * af[j];
-			}
-		}
-		return new double[][] { homs, hets };
 	}
 
 	private boolean useCounts() {
