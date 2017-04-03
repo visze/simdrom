@@ -113,6 +113,10 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 */
 	private String acHomIdentifier;
 	/**
+	 * The identifier of the hom allele counts in the Info column.
+	 */
+	private String acHemiIdentifier;
+	/**
 	 * The identifier of the total number of alleles.
 	 */
 	private String anIdentifier;
@@ -180,6 +184,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 *            {@link #acHetIdentifier}
 	 * @param acHomIdentifier
 	 *            {@link #acHomIdentifier}
+	 * @param acHomIdentifier
+	 *            {@link #acHemiIdentifier}
 	 * @param anIdentifier
 	 *            {@link #anIdentifier}
 	 * @param filters
@@ -197,8 +203,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 */
 	private VCFSampler(VCFFileReader reader, double probability, Optional<String> sample, int variantsAmount,
 			String afIdentifier, String acIdentifier, String acHetIdentifier, String acHomIdentifier,
-			String anIdentifier, ImmutableSet<IFilter> filters, IntervalList intervals, DeNovoSampler deNovoSampler,
-			List<Integer> selectAlleles, Random random, String sampleName, Sex sex) {
+			String acHemiIdentifier, String anIdentifier, ImmutableSet<IFilter> filters, IntervalList intervals,
+			DeNovoSampler deNovoSampler, List<Integer> selectAlleles, Random random, String sampleName, Sex sex) {
 		this.reader = reader;
 		this.probability = probability;
 		this.sample = sample;
@@ -207,6 +213,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		this.acIdentifier = acIdentifier;
 		this.acHetIdentifier = acHetIdentifier;
 		this.acHomIdentifier = acHomIdentifier;
+		this.acHemiIdentifier = acHemiIdentifier;
 		this.anIdentifier = anIdentifier;
 		this.filters = filters;
 		this.intervals = intervals;
@@ -268,6 +275,10 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		 * {@link VCFSampler#acHomIdentifier}
 		 */
 		private String acHomIdentifier = null;
+		/**
+		 * {@link VCFSampler#acHomIdentifier}
+		 */
+		private String acHemiIdentifier = null;
 		/**
 		 * {@link VCFSampler#anIdentifier}
 		 */
@@ -397,7 +408,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 		/**
 		 * @param acHetIdentifier
-		 *            The identifier of the heterozygouse number of alleles.
+		 *            The identifier of the heterozygous number of alleles.
 		 * @return The builder with the initialized {@link #acHetIdentifier}
 		 */
 		public Builder acHetIdentifier(String acHetIdentifier) {
@@ -407,11 +418,21 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 		/**
 		 * @param acHomIdentifier
-		 *            The identifier of the homozygouse number of alleles.
+		 *            The identifier of the homozygous number of alleles.
 		 * @return The builder with the initialized {@link #acHomIdentifier}
 		 */
 		public Builder acHomIdentifier(String acHomIdentifier) {
 			this.acHomIdentifier = acHomIdentifier;
+			return this;
+		}
+
+		/**
+		 * @param acHomIdentifier
+		 *            The identifier of the hemizygous number of alleles.
+		 * @return The builder with the initialized {@link #acHemiIdentifier}
+		 */
+		public Builder acHemiIdentifier(String acHemiIdentifier) {
+			this.acHemiIdentifier = acHemiIdentifier;
 			return this;
 		}
 
@@ -502,25 +523,28 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 			if (anIdentifier != null) {
 				if (acIdentifier != null) {
 					acHetIdentifier = null;
+					acHemiIdentifier = null;
 					acHomIdentifier = null;
-				} else if (acHetIdentifier != null && acHomIdentifier != null)
+				} else if (acHetIdentifier != null && acHomIdentifier != null && acHemiIdentifier != null)
 					acIdentifier = null;
 				else {
 					acIdentifier = null;
 					anIdentifier = null;
 					acHetIdentifier = null;
+					acHemiIdentifier = null;
 					acHomIdentifier = null;
 				}
 			} else {
 				acIdentifier = null;
 				anIdentifier = null;
 				acHetIdentifier = null;
+				acHemiIdentifier = null;
 				acHomIdentifier = null;
 			}
 
 			// check if identifiers are present
 			List<String> ids = Lists.newArrayList(acIdentifier, anIdentifier, afIdentifier, acHetIdentifier,
-					acHomIdentifier);
+					acHomIdentifier, acHemiIdentifier);
 			ids.removeIf(Objects::isNull);
 			for (String id : ids) {
 				if (reader.getFileHeader().getInfoHeaderLine(id) == null) {
@@ -557,8 +581,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 			}
 
 			return new VCFSampler(reader, probability, sample, variantsAmount, afIdentifier, acIdentifier,
-					acHetIdentifier, acHomIdentifier, anIdentifier, filters, intervals, deNovoSampler, selectAlleles,
-					random, sampleName, sex.get());
+					acHetIdentifier, acHomIdentifier, acHemiIdentifier, anIdentifier, filters, intervals, deNovoSampler,
+					selectAlleles, random, sampleName, sex.get());
 		}
 
 		private void setCounts(int counts, Random random) {
@@ -781,49 +805,42 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				afs = new double[] { 1.0 - altAF, altAF };
 			}
 			candidates = getCandidateByHardyWeinberg(candidate.getContig(), afs);
-		} else if (useACHetHom()) {
+		} else if (useACHetHomHemi()) {
 			Object acHet = candidate.getCommonInfo().getAttribute(getACHetIdentifier());
 			Object acHom = candidate.getCommonInfo().getAttribute(getACHomIdentifier());
 			int an = candidate.getCommonInfo().getAttributeAsInt(getANIdentifier(), 0);
-			double anIndividuals = an / 2.0;
+
+			List<Integer> acAltHomList = new ArrayList<>();
+			List<Integer> acAltHetList = new ArrayList<>();
+			List<Integer> acAltHemiList = new ArrayList<>();
+
 			if (acHet instanceof ArrayList<?> && acHom instanceof ArrayList<?>) {
-				ArrayList<Double> afAltHomList = new ArrayList<>();
-				ArrayList<Double> afAltHetList = new ArrayList<>();
 				if (((ArrayList<?>) acHet).get(0) instanceof String
 						&& ((ArrayList<?>) acHom).get(0) instanceof String) {
 					for (Object oHom : (ArrayList<?>) acHom) {
-						afAltHomList.add(Double.parseDouble((String) oHom) / anIndividuals);
+						acAltHomList.add(2 * Integer.parseInt((String) oHom));
 					}
 					for (Object oHet : (ArrayList<?>) acHet) {
-						afAltHetList.add(Double.parseDouble((String) oHet) / anIndividuals);
+						acAltHetList.add(Integer.parseInt((String) oHet));
 					}
+
 				}
-				double sum = 0;
-				double[] afsHom = new double[afAltHomList.size() + 1];
-				double[] afsHet = new double[IntMath.binomial(afAltHomList.size(), 2)];
-				int pos = 0;
-				for (int i = 0; i < candidate.getAlleles().size(); i++) {
-					for (int j = i; i < candidate.getAlleles().size(); j++) {
-						if (i == j) {
-							sum += afAltHomList.get(i);
-							afsHom[i + 1] = afAltHomList.get(i);
-						} else {
-							sum += afAltHetList.get(pos);
-							afsHet[pos] = afAltHetList.get(pos);
-							pos++;
+				Object acHemi = candidate.getCommonInfo().getAttribute(getACHemiIdentifier());
+				if (acHemi instanceof ArrayList<?>) {
+					if (((ArrayList<?>) acHemi).get(0) instanceof String) {
+						for (Object oHemi : (ArrayList<?>) acHemi) {
+							acAltHemiList.add(Integer.parseInt((String) oHemi));
 						}
 					}
 				}
-				afsHom[0] = Math.max(0.0, 1.0 - sum);
-				candidates = getCandidate(new double[][] { afsHom, afsHet });
+
 			} else {
-				double altHomAF = (double) candidate.getCommonInfo().getAttributeAsInt(getACHomIdentifier(), 0)
-						/ anIndividuals;
-				double altHetAF = (double) candidate.getCommonInfo().getAttributeAsInt(getACHetIdentifier(), 0)
-						/ anIndividuals;
-				candidates = getCandidate(new double[][] { new double[] { 1.0 - altHomAF - altHetAF, altHomAF },
-						new double[] { altHetAF } });
+				acAltHomList.add(2 * candidate.getCommonInfo().getAttributeAsInt(getACHomIdentifier(), 0));
+				acAltHetList.add(candidate.getCommonInfo().getAttributeAsInt(getACHetIdentifier(), 0));
+				acAltHemiList.add(candidate.getCommonInfo().getAttributeAsInt(getACHemiIdentifier(), 0));
+
 			}
+			candidates = getCandidateByHomHetHemi(candidate.getContig(), acAltHomList, acAltHetList, acAltHemiList, an);
 		} else if (useCounts()) { // variantsAmount > 0
 			for (int i = 0; i < candidate.getAlternateAlleles().size(); i++) {
 				this.position++;
@@ -883,14 +900,108 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		return getACIdentifier() != null && getANIdentifier() != null;
 	}
 
-	private boolean useACHetHom() {
-		return getACHetIdentifier() != null && getACHomIdentifier() != null && getANIdentifier() != null;
+	private boolean useACHetHomHemi() {
+		return getACHetIdentifier() != null && getACHomIdentifier() != null && getACHemiIdentifier() != null
+				&& getANIdentifier() != null;
+	}
+
+	private Optional<int[]> getCandidateByHomHetHemi(String contig, List<Integer> acAltHomList,
+			List<Integer> acAltHetList, List<Integer> acAltHemiList, int an) {
+
+		boolean onX = onX(contig);
+		boolean onY = onY(contig);
+		double[][] homHetHemiProbs = null;
+		if (onX | onY) {
+			int acHemi = acAltHemiList.stream().mapToInt(Integer::intValue).sum();
+			int acHetHom = acAltHetList.stream().mapToInt(Integer::intValue).sum();
+			acHetHom += acAltHomList.stream().mapToInt(Integer::intValue).sum();
+			// hemi male
+			double sum = 0;
+			double[] afsHemi = new double[acAltHemiList.size() + 1];
+			for (int i = 0; i < afsHemi.length; i++) {
+				afsHemi[i + 1] = (double) acAltHemiList.get(i) / (double) (an - acHetHom);
+				sum += afsHemi[i + 1];
+
+			}
+			afsHemi[0] = Math.max(0.0, 1.0 - sum);
+			// female
+			sum = 0;
+			double[] afsHom = new double[acAltHomList.size() + 1];
+			double[] afsHet = new double[IntMath.binomial(acAltHomList.size(), 2)];
+			int pos = 0;
+			for (int i = 0; i < afsHom.length; i++) {
+				for (int j = i; i < afsHom.length; j++) {
+					if (i == j) {
+						afsHom[i + 1] = (double) acAltHomList.get(i) / (double) (an - acHemi);
+						sum += afsHom[i + 1];
+
+					} else {
+						afsHet[pos] = (double) acAltHetList.get(pos) / (double) (an - acHemi);
+						sum += afsHet[pos];
+						pos++;
+					}
+				}
+			}
+			afsHom[0] = Math.max(0.0, 1.0 - sum);
+
+			switch (sex) {
+			case MALE:
+				if (onX)
+					homHetHemiProbs = new double[][] { new double[0], new double[0], afsHemi };
+				else
+					homHetHemiProbs = new double[][] { new double[0], new double[0], afsHemi };
+				break;
+
+			case FEMALE:
+				if (onX)
+					homHetHemiProbs = new double[][] { afsHom, afsHet, new double[0] };
+				else
+					homHetHemiProbs = new double[][] { new double[0], new double[0], new double[0] };
+				break;
+
+			case UNKNOWN:
+				if (onX)
+					homHetHemiProbs = (random.nextBoolean() ? new double[][] { new double[0], new double[0], afsHemi }
+							: new double[][] { afsHom, afsHet, new double[0] });
+				else
+					homHetHemiProbs = (random.nextBoolean() ? new double[][] { new double[0], new double[0], afsHemi }
+							: new double[][] { new double[0], new double[0], new double[0] });
+				break;
+			case NONE:
+
+				return Optional.empty();
+			}
+		} else {
+			double sum = 0;
+			double[] afsHom = new double[acAltHomList.size() + 1];
+			double[] afsHet = new double[IntMath.binomial(acAltHomList.size(), 2)];
+			double[] afsHemi = new double[0];
+			int pos = 0;
+			for (int i = 0; i < afsHom.length; i++) {
+				for (int j = i; i < afsHom.length; j++) {
+					if (i == j) {
+						afsHom[i + 1] = (double) acAltHomList.get(i) / (double) an;
+						sum += afsHom[i + 1];
+
+					} else {
+						afsHet[pos] = (double) acAltHetList.get(pos) / (double) an;
+						sum += afsHet[pos];
+						pos++;
+					}
+				}
+			}
+			afsHom[0] = Math.max(0.0, 1.0 - sum);
+			homHetHemiProbs = new double[][] { afsHom, afsHet, afsHemi };
+		}
+
+		return getCandidate(homHetHemiProbs);
+
 	}
 
 	private Optional<int[]> getCandidateByHardyWeinberg(String contig, double[] af) {
 		boolean onX = onX(contig);
 		boolean onY = onY(contig);
-		double[][] homHetHemiProbs;
+		double[][] homHetHemiProbs = null;
 		if (onX | onY) {
 
 			switch (sex) {
@@ -905,7 +1016,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				if (onX)
 					homHetHemiProbs = getHardyWeinbergPrincipleFemaleXHomHet(af);
 				else
-					homHetHemiProbs = new double[][] { new double[0], new double[0] };
+					homHetHemiProbs = new double[][] { new double[0], new double[0], new double[0] };
 				break;
 
 			case UNKNOWN:
@@ -914,15 +1025,15 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 							: getHardyWeinbergPrincipleFemaleXHomHet(af));
 				else
 					homHetHemiProbs = (random.nextBoolean() ? getHardyWeinbergPrincipleMaleYHemi(af)
-							: new double[][] { new double[0], new double[0] });
+							: new double[][] { new double[0], new double[0], new double[0] });
 				break;
 			case NONE:
 
 				return Optional.empty();
 			}
+		} else {
+			homHetHemiProbs = getHardyWeinbergPrincipleHomHet(af);
 		}
-
-		homHetHemiProbs = getHardyWeinbergPrincipleHomHet(af);
 
 		return getCandidate(homHetHemiProbs);
 	}
@@ -1073,6 +1184,10 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 	public String getACHomIdentifier() {
 		return acHomIdentifier;
+	}
+
+	public String getACHemiIdentifier() {
+		return acHemiIdentifier;
 	}
 
 	public String getANIdentifier() {
