@@ -6,18 +6,28 @@
 
 * Adapt API to new simdrom-core
 * Introduce a seed option
+* -- name to set a sample-name (overwrites name "Sampled" in vcf file)
 
 ### simdrom-core
 
-* big resutructuing (using uilders, optionals, etc.)
+* big restructuring (using Builders, optionals, etc.)
+* Fixing bug in ClinVarFilter (wrong object was used to write down the omim IDs)
 * Fixing bugs in VCFSampler and SpikeIn
 * Fixing seed option bugs (Collection.shuffle was still random even if a seed was set)
 * Limiting possible alleles to max. 2. Something like 2/3/4 should not be possible anymore!
+* fix in hardy weinberg
+* add possibility to use hom/het/hemi allele counts from exac etc.
+* Adding sex to simdrom
+  * user can define the sex of the simulated individual. It can be also be randomly assigned or it can be none (only autosomes)
+  * Hardy weinberg sampling works dependend on the sex on X and Y
+  * Same for ac hom/get/hemi
+* generate genotype not correctly (consider all possible genotype, not only 2, seen at the side when using )
+
 
 ### manual
 
-* crateing readthedocs manual!
+* creating readthedocs manual!
 
 ## v0.2
 
-* no changelog avaiable
+* no changelog available
