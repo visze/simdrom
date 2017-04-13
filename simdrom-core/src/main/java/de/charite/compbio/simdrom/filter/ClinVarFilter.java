@@ -110,7 +110,7 @@ public class ClinVarFilter extends AFilter {
 					for (String key : dbAttributes.keySet()) {
 						builder = builder.attribute(key, dbAttributes.get(key).stream().collect(Collectors.toList()));
 					}
-					builder = builder.attribute("CLNSIG", sigs_dbs_ids.keySet());
+					builder = builder.attribute("CLNSIG", sigs_dbs_ids.keySet().stream().collect(Collectors.toList()));
 					return Optional.of(builder.make());
 				}
 
