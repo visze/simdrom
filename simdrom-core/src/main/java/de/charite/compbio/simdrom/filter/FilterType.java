@@ -15,5 +15,9 @@ public enum FilterType {
 	 * Filter the clinVar VCF file looking for pathogenic variants. It takes the Clinical allele , the clinical
 	 * significance, the clincial origin and the clinical db/in into account.
 	 */
-	CLINVAR_FILTER;
+	CLINVAR_FILTER,
+	/**
+	 * Removes all gonosomes. Sometimes Gonosomes might be not needed for some applications.   
+	 */
+	GONOSOME_FILTER;
 }

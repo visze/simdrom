@@ -130,6 +130,14 @@ public class SIMdromSetting {
 	 */
 	public static String MUTATIONS_HOM_ALLELE_COUNT;
 	/**
+	 * Identifier in the info-String of the hemizygous allele count in the {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 */
+	public static String BACKGROUND_HEMI_ALLELE_COUNT;
+	/**
+	 * Identifier in the info-String of the hemizygous allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 */
+	public static String MUTATIONS_HEMI_ALLELE_COUNT;
+	/**
 	 * If set, generate deNovo mutations.
 	 */
 	public static boolean USE_DE_NOVO = false;
@@ -262,6 +270,16 @@ public class SIMdromSetting {
 		options.addOption(Option.builder("mAChom").hasArg().longOpt("mutations-hom-allele-count")
 				.desc("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single homozygous probabilities per variant. (mAChom/mAN)")
 				.build());
+		
+		// background allele HEMI allele count
+		options.addOption(Option.builder("bAChemi").hasArg().longOpt("background-hemi-allele-count")
+				.desc("Optional. If set, the identifier in the info string of the background VCF will be used to compute single hemizygous probabilities per variant. (bAChemi/bAN)")
+				.build());
+
+		// mutations allele HEMI allele count
+		options.addOption(Option.builder("mAChemi").hasArg().longOpt("mutations-hemi-allele-count")
+				.desc("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single hemizygous probabilities per variant. (mAChemi/mAN)")
+				.build());
 
 		// deNovo rate
 		options.addOption(Option.builder().optionalArg(true).longOpt("de-novo")
@@ -380,6 +398,13 @@ public class SIMdromSetting {
 			}
 			if (cmd.hasOption("mutations-hom-allele-count")) {
 				MUTATIONS_HOM_ALLELE_COUNT = cmd.getOptionValue("mutations-hom-allele-count");
+			}
+			// AChemi identifier
+			if (cmd.hasOption("background-hemi-allele-count")) {
+				BACKGROUND_HEMI_ALLELE_COUNT = cmd.getOptionValue("background-hemi-allele-count");
+			}
+			if (cmd.hasOption("mutations-hemi-allele-count")) {
+				MUTATIONS_HEMI_ALLELE_COUNT = cmd.getOptionValue("mutations-hemi-allele-count");
 			}
 			// single sample background
 			if (cmd.hasOption("single-sample-background")) {
