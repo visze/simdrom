@@ -18,10 +18,11 @@ import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.VariantContextBuilder;
 
 /**
- * An implementation to use the VCF-Info with kex/values provided by the ClinVar file to filter it. It will returns all
- * Variants and alleles that comes from one of the used databases {@link #clndsbn} (OMIM,MedLine,...) that have one of
- * the clinical origins in {@link #clnorigin} (somatic, germline,...) and one of the the clinical significance clinical
- * significances in {@link #clnsig}.
+ * An implementation to use the VCF-Info with kex/values provided by the ClinVar
+ * file to filter it. It will returns all Variants and alleles that comes from
+ * one of the used databases {@link #clndsbn} (OMIM,MedLine,...) that have one
+ * of the clinical origins in {@link #clnorigin} (somatic, germline,...) and one
+ * of the the clinical significance clinical significances in {@link #clnsig}.
  * 
  * @author <a href="mailto:max.schubach@charite.de">Max Schubach</a>
  *
@@ -29,8 +30,8 @@ import htsjdk.variant.variantcontext.VariantContextBuilder;
 public class ClinVarFilter extends AFilter {
 
 	/**
-	 * All clinical significances that should be used (info field CLNSIG). E.g. 4 and 5 is likely pathogenic and
-	 * pathogenic
+	 * All clinical significances that should be used (info field CLNSIG). E.g.
+	 * 4 and 5 is likely pathogenic and pathogenic
 	 */
 	private Set<Integer> clnsig = Sets.newHashSet(4, 5);
 	/**
@@ -38,7 +39,8 @@ public class ClinVarFilter extends AFilter {
 	 */
 	private Set<Integer> clnorigin = Sets.newHashSet(1);
 	/**
-	 * The names in the databases that should be used (info field CLNDSDB). E.g. OMIM
+	 * The names in the databases that should be used (info field CLNDSDB). E.g.
+	 * OMIM
 	 */
 	private Set<String> clndsbn = Sets.newHashSet("OMIM");
 
@@ -62,7 +64,8 @@ public class ClinVarFilter extends AFilter {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see de.charite.compbio.simdrom.filter.IFilter#filter(htsjdk.variant. variantcontext.VariantContext)
+	 * @see de.charite.compbio.simdrom.filter.IFilter#filter(htsjdk.variant.
+	 * variantcontext.VariantContext)
 	 */
 	@Override
 	public Optional<VariantContext> filter(Optional<VariantContext> optional_vc) {
@@ -102,7 +105,7 @@ public class ClinVarFilter extends AFilter {
 					for (Integer sig : sigs_dbs_ids.keySet()) {
 						for (String db : sigs_dbs_ids.get(sig).keySet()) {
 							for (String id : sigs_dbs_ids.get(sig).get(db)) {
-								dbAttributes.put(db, id.replaceAll("\\s",""));
+								dbAttributes.put(db, id.replaceAll("\\s", ""));
 							}
 
 						}
@@ -146,25 +149,30 @@ public class ClinVarFilter extends AFilter {
 
 		Allele allele = vc.getAlternateAllele(allelePerCLNAllele - 1);
 		boolean use = false;
-		for (int j = 0; j < dbsPerCLNAllele.length; j++) { // significance
-			int sig = Integer.parseInt(sigsPerCLNAllele[j]);
+		if (dbsPerCLNAllele.length != sigsPerCLNAllele.length) {
+			System.err.println("Wrong ClinVar format for " + vc.toString() + "!\n CLNSIG has not the samle length than the databases.");
+		} else {
 
-			if (clnsig.contains(sig)) {
-				String[] dbsOfCLNAllele = dbsPerCLNAllele[j].split(":");
-				String[] idsOfCLNAllele = idsPerCLNAllele[j].split(":");
+			for (int j = 0; j < dbsPerCLNAllele.length; j++) { // significance
+				int sig = Integer.parseInt(sigsPerCLNAllele[j]);
 
-				for (int k = 0; k < dbsOfCLNAllele.length; k++) { // databases
-					if (clndsbn.contains(dbsOfCLNAllele[k])) {
-						if (!sigs_dbs_ids.containsKey(sig)) {
-							sigs_dbs_ids.put(sig, HashMultimap.create());
+				if (clnsig.contains(sig)) {
+					String[] dbsOfCLNAllele = dbsPerCLNAllele[j].split(":");
+					String[] idsOfCLNAllele = idsPerCLNAllele[j].split(":");
+
+					for (int k = 0; k < dbsOfCLNAllele.length; k++) { // databases
+						if (clndsbn.contains(dbsOfCLNAllele[k])) {
+							if (!sigs_dbs_ids.containsKey(sig)) {
+								sigs_dbs_ids.put(sig, HashMultimap.create());
+							}
+							sigs_dbs_ids.get(sig).put(dbsOfCLNAllele[k], idsOfCLNAllele[k]);
+							use = true;
 						}
-						sigs_dbs_ids.get(sig).put(dbsOfCLNAllele[k], idsOfCLNAllele[k]);
-						use = true;
 					}
+
 				}
 
 			}
-
 		}
 		if (use) {
 			if (!newAlleles.contains(allele))
