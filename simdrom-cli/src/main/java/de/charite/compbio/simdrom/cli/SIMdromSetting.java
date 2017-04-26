@@ -50,7 +50,8 @@ public class SIMdromSetting {
 	 */
 	public static long SEED = 42;
 	/**
-	 * VCF of the background mutation. These mutations are used to sample a new mutation file. Required.
+	 * VCF of the background mutation. These mutations are used to sample a new
+	 * mutation file. Required.
 	 */
 	public static File BACKGROUND_VCF;
 	/**
@@ -58,85 +59,115 @@ public class SIMdromSetting {
 	 */
 	public static File MUTATIONS_VCF;
 	/**
-	 * Probability so choose a variant in the {@link SIMdromSetting#BACKGROUND_VCF}.
+	 * Probability so choose a variant in the
+	 * {@link SIMdromSetting#BACKGROUND_VCF}.
 	 */
 	public static double BACKGROUND_PROBABILITY = 1.0;
 	/**
-	 * If set only the exact number of variants will be selected in the {@link SIMdromSetting#BACKGROUND_VCF}.
+	 * If set only the exact number of variants will be selected in the
+	 * {@link SIMdromSetting#BACKGROUND_VCF}.
 	 */
 	public static int BACKGROUND_VARIANT_NUMBER;
 	/**
-	 * Probability so choose a mutation in the {@link SIMdromSetting#MUTATIONS_VCF}.
+	 * Probability so choose a mutation in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF}.
 	 */
 	public static double MUTATIONS_PROBABILITY = 1.0;
 	/**
-	 * If set only the exact number of variants will be selected in the {@link SIMdromSetting#MUTATIONS_VCF}.
+	 * If set only the exact number of variants will be selected in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF}.
 	 */
 	public static int MUTATIONS_VARIANT_NUMBER;
 	/**
-	 * If set only one (random) sample will be selected of the {@link SIMdromSetting#BACKGROUND_VCF}.
+	 * If set only one (random) sample will be selected of the
+	 * {@link SIMdromSetting#BACKGROUND_VCF}.
 	 */
 	public static boolean ONLY_ONE_BACKGROUND_SAMPLE = false;
 	/**
-	 * If not null the given sample will be selected {@link SIMdromSetting#BACKGROUND_VCF}.
+	 * If not null the given sample will be selected
+	 * {@link SIMdromSetting#BACKGROUND_VCF}.
 	 */
 	public static String ONLY_ONE_BACKGROUND_SAMPLE_NAME;
 	/**
-	 * If set only one (random) sample will be selected of the {@link SIMdromSetting#MUTATIONS_VCF}.
+	 * If set only one (random) sample will be selected of the
+	 * {@link SIMdromSetting#MUTATIONS_VCF}.
 	 */
 	public static boolean ONLY_ONE_MUTATIONS_SAMPLE = false;
 	/**
-	 * If not null the given sample will be selected {@link SIMdromSetting#MUTATIONS_VCF}.
+	 * If not null the given sample will be selected
+	 * {@link SIMdromSetting#MUTATIONS_VCF}.
 	 */
 	public static String ONLY_ONE_MUTATIONS_SAMPLE_NAME;
 	/**
-	 * Identifier in the info-String of the allele frequency in the {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 * Identifier in the info-String of the allele frequency in the
+	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
 	 */
 	public static String BACKGROUND_ALLELE_FREQUENCY_IDENTIFIER;
 	/**
-	 * Identifier in the info-String of the allele frequency in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the allele frequency in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String MUTATIONS_ALLELE_FREQUENCY_IDENTIFIER;
 	/**
-	 * Identifier in the info-String of the ALT allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the ALT allele count in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String BACKGROUND_ALT_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the ALT allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the ALT allele count in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String MUTATIONS_ALT_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the all allele count in the {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 * Identifier in the info-String of the all allele count in the
+	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
 	 */
 	public static String BACKGROUND_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the all allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the all allele count in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String MUTATIONS_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the heterozygous allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the heterozygous allele count in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String BACKGROUND_HET_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the heterozygous allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the heterozygous allele count in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String MUTATIONS_HET_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the homozygous allele count in the {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 * Identifier in the info-String of the homozygous allele count in the
+	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
 	 */
 	public static String BACKGROUND_HOM_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the homozygous allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the homozygous allele count in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String MUTATIONS_HOM_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the hemizygous allele count in the {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 * Identifier in the info-String of the hemizygous allele count in the
+	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
 	 */
 	public static String BACKGROUND_HEMI_ALLELE_COUNT;
 	/**
-	 * Identifier in the info-String of the hemizygous allele count in the {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 * Identifier in the info-String of the hemizygous allele count in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
 	 */
 	public static String MUTATIONS_HEMI_ALLELE_COUNT;
+	/**
+	 * Identifier in the info-String of the genotype counts from gnomAD in the
+	 * {@link SIMdromSetting#BACKGROUND_VCF} file.
+	 */
+	public static String BACKGROUND_GC_COUNT;
+	/**
+	 * Identifier in the info-String of the genotype counts from genomAD in the
+	 * {@link SIMdromSetting#MUTATIONS_VCF} file.
+	 */
+	public static String MUTATIONS_GC_COUNT;
 	/**
 	 * If set, generate deNovo mutations.
 	 */
@@ -270,7 +301,7 @@ public class SIMdromSetting {
 		options.addOption(Option.builder("mAChom").hasArg().longOpt("mutations-hom-allele-count")
 				.desc("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single homozygous probabilities per variant. (mAChom/mAN)")
 				.build());
-		
+
 		// background allele HEMI allele count
 		options.addOption(Option.builder("bAChemi").hasArg().longOpt("background-hemi-allele-count")
 				.desc("Optional. If set, the identifier in the info string of the background VCF will be used to compute single hemizygous probabilities per variant. (bAChemi/bAN)")
@@ -279,6 +310,15 @@ public class SIMdromSetting {
 		// mutations allele HEMI allele count
 		options.addOption(Option.builder("mAChemi").hasArg().longOpt("mutations-hemi-allele-count")
 				.desc("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute single hemizygous probabilities per variant. (mAChemi/mAN)")
+				.build());
+		// background allele HEMI allele count
+		options.addOption(Option.builder("bGC").hasArg().longOpt("background-gc-count")
+				.desc("Optional. If set, the identifier in the info string of the background VCF will be used to compute genotype propabilities! This is a function exclusive for genomAD. X/Y not supported. AN will be computed using the sum in GC flag.")
+				.build());
+
+		// mutations allele HEMI allele count
+		options.addOption(Option.builder("mGC").hasArg().longOpt("mutations-gc-count")
+				.desc("Optional. If set, the identifier in the info string of the mutations VCF will be used to compute genotype propabilities! This is a function exclusive for genomAD. X/Y not supported. AN will be computed using the sum in GC flag.")
 				.build());
 
 		// deNovo rate
@@ -406,6 +446,13 @@ public class SIMdromSetting {
 			if (cmd.hasOption("mutations-hemi-allele-count")) {
 				MUTATIONS_HEMI_ALLELE_COUNT = cmd.getOptionValue("mutations-hemi-allele-count");
 			}
+			// ACgc identifier
+			if (cmd.hasOption("background-gc-count")) {
+				BACKGROUND_GC_COUNT = cmd.getOptionValue("background-gc-count");
+			}
+			if (cmd.hasOption("mutations-gc-count")) {
+				MUTATIONS_GC_COUNT = cmd.getOptionValue("mutations-gc-count");
+			}
 			// single sample background
 			if (cmd.hasOption("single-sample-background")) {
 				ONLY_ONE_BACKGROUND_SAMPLE = true;
@@ -454,7 +501,7 @@ public class SIMdromSetting {
 					}
 				}
 			}
-			MUTATIONS_FILTERS = ImmutableSet.<IFilter> builder().addAll(filters).build();
+			MUTATIONS_FILTERS = ImmutableSet.<IFilter>builder().addAll(filters).build();
 
 			// sample name
 			if (cmd.hasOption("sample-name"))

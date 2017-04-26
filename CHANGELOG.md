@@ -7,6 +7,8 @@
 * Adapt API to new simdrom-core
 * Introduce a seed option
 * -- name to set a sample-name (overwrites name "Sampled" in vcf file)
+* -bGC or -mGC
+* het/hom/hemi support
 
 ### simdrom-core
 
@@ -22,6 +24,7 @@
   * Hardy weinberg sampling works dependend on the sex on X and Y
   * Same for ac hom/get/hemi
 * generate genotype not correctly (consider all possible genotype, not only 2, seen at the side when using )
+* adding gnomAD support using the genotype counts (GC) flag
 
 
 ### manual

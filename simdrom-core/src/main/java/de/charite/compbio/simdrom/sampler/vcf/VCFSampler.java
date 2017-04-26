@@ -121,6 +121,10 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 */
 	private String anIdentifier;
 	/**
+	 * The identifier of the genotype counts.
+	 */
+	private String gcIdentifier;
+	/**
 	 * If set the genotypes of this samples are selected.
 	 */
 	private Optional<String> sample;
@@ -203,8 +207,9 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 	 */
 	private VCFSampler(VCFFileReader reader, double probability, Optional<String> sample, int variantsAmount,
 			String afIdentifier, String acIdentifier, String acHetIdentifier, String acHomIdentifier,
-			String acHemiIdentifier, String anIdentifier, ImmutableSet<IFilter> filters, IntervalList intervals,
-			DeNovoSampler deNovoSampler, List<Integer> selectAlleles, Random random, String sampleName, Sex sex) {
+			String acHemiIdentifier, String anIdentifier, String gcIdentifier, ImmutableSet<IFilter> filters,
+			IntervalList intervals, DeNovoSampler deNovoSampler, List<Integer> selectAlleles, Random random,
+			String sampleName, Sex sex) {
 		this.reader = reader;
 		this.probability = probability;
 		this.sample = sample;
@@ -215,6 +220,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		this.acHomIdentifier = acHomIdentifier;
 		this.acHemiIdentifier = acHemiIdentifier;
 		this.anIdentifier = anIdentifier;
+		this.gcIdentifier = gcIdentifier;
 		this.filters = filters;
 		this.intervals = intervals;
 		this.selectAlleles = selectAlleles;
@@ -279,6 +285,10 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		 * {@link VCFSampler#acHomIdentifier}
 		 */
 		private String acHemiIdentifier = null;
+		/**
+		 * {@link VCFSampler#gcIdentifier}
+		 */
+		private String gcIdentifier = null;
 		/**
 		 * {@link VCFSampler#anIdentifier}
 		 */
@@ -437,6 +447,16 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		}
 
 		/**
+		 * @param gcIdentifier
+		 *            The identifier of the genotype counts.
+		 * @return The builder with the initialized {@link #gcIdentifier}
+		 */
+		public Builder gcIdentifier(String gcIdentifier) {
+			this.gcIdentifier = gcIdentifier;
+			return this;
+		}
+
+		/**
 		 * @param variantsAmount
 		 *            The maximum number of variants that should be selected by
 		 *            the sampler. If set to smaller than 1 this option is of
@@ -521,11 +541,12 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 			// do not use it if one of them is not set!
 			if (anIdentifier != null) {
-				if (acIdentifier != null) {
+				if (acIdentifier != null) { // use AC/AN
 					acHetIdentifier = null;
 					acHemiIdentifier = null;
 					acHomIdentifier = null;
-				} else if (acHetIdentifier != null && acHomIdentifier != null && acHemiIdentifier != null)
+				} else if (acHetIdentifier != null && acHomIdentifier != null && acHemiIdentifier != null) // USE
+																											// HET/HOM/HEMI
 					acIdentifier = null;
 				else {
 					acIdentifier = null;
@@ -544,7 +565,7 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 			// check if identifiers are present
 			List<String> ids = Lists.newArrayList(acIdentifier, anIdentifier, afIdentifier, acHetIdentifier,
-					acHomIdentifier, acHemiIdentifier);
+					acHomIdentifier, acHemiIdentifier, gcIdentifier);
 			ids.removeIf(Objects::isNull);
 			for (String id : ids) {
 				if (reader.getFileHeader().getInfoHeaderLine(id) == null) {
@@ -581,8 +602,8 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 			}
 
 			return new VCFSampler(reader, probability, sample, variantsAmount, afIdentifier, acIdentifier,
-					acHetIdentifier, acHomIdentifier, acHemiIdentifier, anIdentifier, filters, intervals, deNovoSampler,
-					selectAlleles, random, sampleName, sex.get());
+					acHetIdentifier, acHomIdentifier, acHemiIdentifier, anIdentifier, gcIdentifier, filters, intervals,
+					deNovoSampler, selectAlleles, random, sampleName, sex.get());
 		}
 
 		private void setCounts(int counts, Random random) {
@@ -805,6 +826,36 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 				afs = new double[] { 1.0 - altAF, altAF };
 			}
 			candidates = getCandidateByHardyWeinberg(candidate.getContig(), afs);
+		} else if (useGC()) {
+			Object gc = candidate.getCommonInfo().getAttribute(getGCIdentifier());
+			List<Integer> gcList = new ArrayList<>();
+			if (gc instanceof ArrayList<?>) {
+				if (((ArrayList<?>) gc).get(0) instanceof String) {
+					for (Object oGC : (ArrayList<?>) gc) {
+						gcList.add(Integer.parseInt((String) oGC));
+					}
+				}
+			}
+			int an = gcList.stream().mapToInt(Integer::intValue).sum() * 2;
+			// not supported well by genomad
+			if (onX(candidate.getContig()) || onY(candidate.getContig()))
+				candidates = Optional.empty();
+			else {
+				int alleleSize = candidate.getAlternateAlleles().size();
+				List<Integer> acAltHomList = new ArrayList<>();
+				List<Integer> acAltHetList = new ArrayList<>();
+				// hom
+				for (int i = gcList.size() - alleleSize; i < gcList.size(); i++) {
+					acAltHomList.add(gcList.get(i) * 2);
+				}
+				// het
+				for (int i = 1; i < gcList.size() - alleleSize; i++) {
+					acAltHetList.add(gcList.get(i));
+				}
+				candidates = getCandidateByHomHetHemi(candidate.getContig(), acAltHomList,acAltHetList, 
+						new ArrayList<>(), an);
+			}
+
 		} else if (useACHetHomHemi()) {
 			Object acHet = candidate.getCommonInfo().getAttribute(getACHetIdentifier());
 			Object acHom = candidate.getCommonInfo().getAttribute(getACHomIdentifier());
@@ -921,17 +972,16 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 			for (int i = 0; i < acAltHemiList.size(); i++) {
 				afsHemi[i + 1] = (double) acAltHemiList.get(i) / (double) (an - acHetHom);
 				sum += afsHemi[i + 1];
-
 			}
 			afsHemi[0] = Math.max(0.0, 1.0 - sum);
 			// female
 			sum = 0;
 			double[] afsHom = new double[acAltHomList.size() + 1];
-			double[] afsHet = new double[IntMath.binomial(acAltHomList.size()+1, 2)];
+			double[] afsHet = new double[IntMath.binomial(acAltHomList.size() + 1, 2)];
 			int pos = 0;
 			for (int i = -1; i < acAltHomList.size(); i++) {
 				for (int j = i; j < acAltHomList.size(); j++) {
-					if (i == -1 && j == -1) //skip ref
+					if (i == -1 && j == -1) // skip ref
 						continue;
 					if (i == j) {
 						afsHom[i + 1] = (double) acAltHomList.get(i) / (double) (an - acHemi);
@@ -976,12 +1026,12 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		} else {
 			double sum = 0;
 			double[] afsHom = new double[acAltHomList.size() + 1];
-			double[] afsHet = new double[IntMath.binomial(acAltHomList.size()+1, 2)];
+			double[] afsHet = new double[IntMath.binomial(acAltHomList.size() + 1, 2)];
 			double[] afsHemi = new double[0];
 			int pos = 0;
 			for (int i = -1; i < acAltHomList.size(); i++) {
 				for (int j = i; j < acAltHomList.size(); j++) {
-					if (i == -1 && j == -1) //skip ref
+					if (i == -1 && j == -1) // skip ref
 						continue;
 					if (i == j) {
 						afsHom[i + 1] = (double) acAltHomList.get(i) / (double) an;
@@ -1168,6 +1218,10 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 		return getAFIdentifier() != null;
 	}
 
+	private boolean useGC() {
+		return getGCIdentifier() != null;
+	}
+
 	public void close() {
 		iterator.close();
 		reader.close();
@@ -1175,6 +1229,10 @@ public class VCFSampler implements CloseableIterator<VariantContext> {
 
 	public ImmutableSet<IFilter> getFilters() {
 		return filters;
+	}
+
+	public String getGCIdentifier() {
+		return gcIdentifier;
 	}
 
 	public String getACIdentifier() {
