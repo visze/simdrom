@@ -12,6 +12,9 @@
 
 ### simdrom-core
 
+* Two bugfixes in spike-in
+  * Mutation was not inserted if the variant was the last in a contig
+  * Error when two or mutations where inserted at the end of a contig
 * big restructuring (using Builders, optionals, etc.)
 * Fixing bug in ClinVarFilter (wrong object was used to write down the omim IDs)
 * Fixing bugs in VCFSampler and SpikeIn

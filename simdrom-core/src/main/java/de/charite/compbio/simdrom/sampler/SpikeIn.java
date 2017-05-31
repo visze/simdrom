@@ -23,7 +23,7 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 
 	private Optional<VariantContext> backgroundVC;
 	private Optional<VariantContext> mutationsVC;
-	private boolean sameContig = false;
+	private Optional<String> lastBackgroundContig = Optional.empty();
 
 	private final VCFHeader header;
 
@@ -127,19 +127,22 @@ public class SpikeIn implements CloseableIterator<VariantContext> {
 		boolean mutationSelection = false;
 		if (backgroundVC.isPresent() && mutationsVC.isPresent()) {
 			if (backgroundVC.get().getContig().equals(mutationsVC.get().getContig())) {
-				this.sameContig = true;
 				if (mutationsVC.get().getStart() <= backgroundVC.get().getStart()) {
 					output = mutationsVC.get();
 					mutationSelection = true;
-				} else
+				} else {
 					output = backgroundVC.get();
+					lastBackgroundContig = Optional.of(output.getContig());
+				}
 			} else {
-				if (sameContig) { // final write if we switch to the next contig
-					output = backgroundVC.get();
+				if (lastBackgroundContig.isPresent()
+						&& lastBackgroundContig.get().equals(mutationsVC.get().getContig())) { // final write if we switch to the next contig
+					output = mutationsVC.get();
 					mutationSelection = true;
-				} else
+				} else {
 					output = backgroundVC.get();
-				sameContig = false;
+					lastBackgroundContig = Optional.of(output.getContig());
+				}
 			}
 		} else if (mutationsVC.isPresent()) {
 			output = mutationsVC.get();
