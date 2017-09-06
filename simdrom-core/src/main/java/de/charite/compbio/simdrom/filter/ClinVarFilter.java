@@ -30,10 +30,27 @@ import htsjdk.variant.variantcontext.VariantContextBuilder;
 public class ClinVarFilter extends AFilter {
 
 	/**
-	 * All clinical significances that should be used (info field CLNSIG). E.g.
-	 * 4 and 5 is likely pathogenic and pathogenic
+	 * All clinical significances that should be used (info field CLNSIG). E.g. 4
+	 * and 5 is likely pathogenic and pathogenic
 	 */
 	private Set<Integer> clnsig = Sets.newHashSet(4, 5);
+	/**
+	 * All clinical significances that should be used (info field CLNSIG) should be
+	 * submitted (reviewd status) by this id:
+	 * 
+	 * no_assertion - No assertion provided
+	 * 
+	 * no_criteria - No assertion criteria provided
+	 * 
+	 * single - Criteria provided single submitter
+	 * 
+	 * mult - Criteria provided multiple submitters no conflicts
+	 * 
+	 * conf - Criteria provided conflicting interpretations,
+	 * 
+	 * exp - Reviewed by expert panel, guideline - Practice guideline
+	 */
+	private Set<String> clnrevstat = Sets.newHashSet("exp");
 	/**
 	 * The clinical origin (info field CLNORIGIN). E.g. 1 is germline.
 	 */
@@ -54,8 +71,9 @@ public class ClinVarFilter extends AFilter {
 	 * @param clndsbn
 	 *            Set of clinical databases.
 	 */
-	public ClinVarFilter(Set<Integer> clinsig, Set<Integer> clinorigin, Set<String> clndsbn) {
+	public ClinVarFilter(Set<String> clnrevstat, Set<Integer> clinsig, Set<Integer> clinorigin, Set<String> clndsbn) {
 		super(FilterType.CLINVAR_FILTER);
+		this.clnrevstat = clnrevstat;
 		this.clnsig = clinsig;
 		this.clnorigin = clinorigin;
 		this.clndsbn = clndsbn;
@@ -76,8 +94,10 @@ public class ClinVarFilter extends AFilter {
 			newAlleles.add(vc.getReference());
 
 			CommonInfo infoField = vc.getCommonInfo();
-			if (infoField.hasAttribute("CLNSIG") && infoField.hasAttribute("CLNALLE")
-					&& infoField.hasAttribute("CLNDSDB") && infoField.hasAttribute("CLNDSDBID")) {
+			if (infoField.hasAttribute("CLNREVSTAT") && infoField.hasAttribute("CLNSIG")
+					&& infoField.hasAttribute("CLNALLE") && infoField.hasAttribute("CLNDSDB")
+					&& infoField.hasAttribute("CLNDSDBID")) {
+				Object revstats = infoField.getAttribute("CLNREVSTAT");
 				Object sigs = infoField.getAttribute("CLNSIG");
 				Object alleles = infoField.getAttribute("CLNALLE");
 				Object dbs = infoField.getAttribute("CLNDSDB");
@@ -85,17 +105,18 @@ public class ClinVarFilter extends AFilter {
 				Object origin = infoField.getAttribute("CLNORIGIN");
 
 				if (dbs.getClass().isArray()) {
-					filterArray(vc, sigs_dbs_ids, newAlleles, sigs, alleles, dbs, dbids, origin);
+					filterArray(vc, sigs_dbs_ids, newAlleles, revstats, sigs, alleles, dbs, dbids, origin);
 				} else if (dbs instanceof String) {
 
-					filterPerClinAllele(vc, sigs_dbs_ids, newAlleles, (String) sigs, (String) dbs, (String) dbids,
+					filterPerREFStatClinAllele(vc, sigs_dbs_ids, newAlleles, (String) revstats, (String) sigs, (String) dbs, (String) dbids,
 							(String) origin, Integer.parseInt((String) alleles));
 				} else if (dbs instanceof List)
-					filterArray(vc, sigs_dbs_ids, newAlleles, ((List<?>) sigs).toArray(), ((List<?>) alleles).toArray(),
-							((List<?>) dbs).toArray(), ((List<?>) dbids).toArray(), ((List<?>) origin).toArray());
+					filterArray(vc, sigs_dbs_ids, newAlleles, ((List<?>) revstats).toArray(),
+							((List<?>) sigs).toArray(), ((List<?>) alleles).toArray(), ((List<?>) dbs).toArray(),
+							((List<?>) dbids).toArray(), ((List<?>) origin).toArray());
 				else
 					throw new RuntimeException("OHOOOO");
-				// no allele matches, return null
+				// no allele matches, return empty VC
 				if (newAlleles.size() <= 1)
 					return Optional.empty();
 				else {
@@ -123,40 +144,51 @@ public class ClinVarFilter extends AFilter {
 	}
 
 	private void filterArray(VariantContext vc, Map<Integer, HashMultimap<String, String>> sigs_dbs_ids,
-			List<Allele> newAlleles, Object sigs, Object alleles, Object dbs, Object dbids, Object origins) {
-		final int dbLength = Array.getLength(dbs);
-		for (int i = 0; i < dbLength; i++) { // alleles
-
+			List<Allele> newAlleles, Object revstats, Object sigs, Object alleles, Object dbs, Object dbids,
+			Object origins) {
+		final int dbRefStatsLength = Array.getLength(revstats);
+		for (int i = 0; i < dbRefStatsLength; i++) { // alleles
+			// FIXME this is sometimes not in the same length!
+			// Sometimes vc.alleles.size() > 1 != dbRefStatsLength == 1
 			int allelePerCLNAllele = Integer.parseInt((String) Array.get(alleles, i));
-			filterPerClinAllele(vc, sigs_dbs_ids, newAlleles, ((String) Array.get(sigs, i)),
-					((String) Array.get(dbs, i)), ((String) Array.get(dbids, i)), ((String) Array.get(origins, i)),
-					allelePerCLNAllele);
+			filterPerREFStatClinAllele(vc, sigs_dbs_ids, newAlleles, ((String) Array.get(revstats, i)),
+					((String) Array.get(sigs, i)), ((String) Array.get(dbs, i)), ((String) Array.get(dbids, i)),
+					((String) Array.get(origins, i)), allelePerCLNAllele);
 
 		}
 	}
 
-	private void filterPerClinAllele(VariantContext vc, Map<Integer, HashMultimap<String, String>> sigs_dbs_ids,
-			List<Allele> newAlleles, String sigs, String dbs, String ids, String origins, int allelePerCLNAllele) {
+	private void filterPerREFStatClinAllele(VariantContext vc, Map<Integer, HashMultimap<String, String>> sigs_dbs_ids,
+			List<Allele> newAlleles, String revstats, String sigs, String dbs, String ids, String origins,
+			int allelePerCLNAllele) {
 
+		String[] revstatsPerCLNAllele = revstats.split("\\|");
 		String[] sigsPerCLNAllele = sigs.split("\\|");
 		String[] dbsPerCLNAllele = dbs.split("\\|");
 		String[] idsPerCLNAllele = ids.split("\\|");
 
 		int origin = Integer.parseInt(origins);
 
+		// not of the same clinical origin (somatic/germline)
 		if (allelePerCLNAllele <= 0 || !clnorigin.contains(origin))
 			return;
 
 		Allele allele = vc.getAlternateAllele(allelePerCLNAllele - 1);
 		boolean use = false;
-		if (dbsPerCLNAllele.length != sigsPerCLNAllele.length) {
-			System.err.println("Wrong ClinVar format for " + vc.toString() + "!\n CLNSIG has not the samle length than the databases.");
+		if (revstatsPerCLNAllele.length != sigsPerCLNAllele.length) {
+			throw new RuntimeException("Wrong ClinVar format for " + vc.toString()
+					+ "!\n CLNSIG has not the samle length than CLNREFSTAT.");
+		} else if (dbsPerCLNAllele.length != sigsPerCLNAllele.length) {
+			System.err.println("Wrong ClinVar format for " + vc.toString()
+					+ "!\n CLNSIG/CLNREFSTAT has not the samle length than the databases CLNSDB."
+					+ "\n Skipping variant!");
 		} else {
 
-			for (int j = 0; j < dbsPerCLNAllele.length; j++) { // significance
+			for (int j = 0; j < revstatsPerCLNAllele.length; j++) { // significance
 				int sig = Integer.parseInt(sigsPerCLNAllele[j]);
+				String refstat = revstatsPerCLNAllele[j];
 
-				if (clnsig.contains(sig)) {
+				if (clnrevstat.contains(refstat) && clnsig.contains(sig)) {
 					String[] dbsOfCLNAllele = dbsPerCLNAllele[j].split(":");
 					String[] idsOfCLNAllele = idsPerCLNAllele[j].split(":");
 

@@ -28,6 +28,9 @@
   * Same for ac hom/get/hemi
 * generate genotype not correctly (consider all possible genotype, not only 2, seen at the side when using )
 * adding gnomAD support using the genotype counts (GC) flag
+* htsjdk 2.11.0
+* update ClinVarFilter to support CLNREFSTAT
+
 
 
 ### manual
