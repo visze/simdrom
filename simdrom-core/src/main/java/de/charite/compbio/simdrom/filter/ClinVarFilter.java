@@ -146,10 +146,8 @@ public class ClinVarFilter extends AFilter {
 	private void filterArray(VariantContext vc, Map<Integer, HashMultimap<String, String>> sigs_dbs_ids,
 			List<Allele> newAlleles, Object revstats, Object sigs, Object alleles, Object dbs, Object dbids,
 			Object origins) {
-		final int dbRefStatsLength = Array.getLength(revstats);
-		for (int i = 0; i < dbRefStatsLength; i++) { // alleles
-			// FIXME this is sometimes not in the same length!
-			// Sometimes vc.alleles.size() > 1 != dbRefStatsLength == 1
+		final int clinAllelesLength = Array.getLength(alleles);
+		for (int i = 0; i < clinAllelesLength; i++) { // alleles
 			int allelePerCLNAllele = Integer.parseInt((String) Array.get(alleles, i));
 			filterPerREFStatClinAllele(vc, sigs_dbs_ids, newAlleles, ((String) Array.get(revstats, i)),
 					((String) Array.get(sigs, i)), ((String) Array.get(dbs, i)), ((String) Array.get(dbids, i)),
@@ -169,7 +167,7 @@ public class ClinVarFilter extends AFilter {
 
 		int origin = Integer.parseInt(origins);
 
-		// not of the same clinical origin (somatic/germline)
+		// not of the same clinical origin (somatic/germline) or allele is reference (should be in ClinVar)
 		if (allelePerCLNAllele <= 0 || !clnorigin.contains(origin))
 			return;
 
@@ -179,9 +177,9 @@ public class ClinVarFilter extends AFilter {
 			throw new RuntimeException("Wrong ClinVar format for " + vc.toString()
 					+ "!\n CLNSIG has not the samle length than CLNREFSTAT.");
 		} else if (dbsPerCLNAllele.length != sigsPerCLNAllele.length) {
-			System.err.println("Wrong ClinVar format for " + vc.toString()
-					+ "!\n CLNSIG/CLNREFSTAT has not the samle length than the databases CLNSDB."
-					+ "\n Skipping variant!");
+//			System.err.println("Wrong ClinVar format for " + vc.toString()
+//					+ "!\n CLNSIG/CLNREFSTAT has not the samle length than the databases CLNSDB."
+//					+ "\n Skipping variant!");
 		} else {
 
 			for (int j = 0; j < revstatsPerCLNAllele.length; j++) { // significance
